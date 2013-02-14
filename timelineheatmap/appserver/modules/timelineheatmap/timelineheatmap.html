@@ -1,0 +1,20 @@
+<%page args="module"/>
+<style type="text/css">
+    .axis path, .axis line {
+        fill: none;
+        stroke: gray;
+        stroke-width: 1px;
+   }
+</style>
+<div class="timelineheatmap">
+
+<%lib:script_tags files="${['/static/app/timelineheatmap/HeatMapPlot.js/HeatMapPlot.js',
+                            '/static/app/timelineheatmap/d3.v2.js/d3.v2.js']}" />
+
+
+<%page args="module" expression_filter="h" />
+<%namespace name="lib" file="//lib.html" import="*"/>
+
+<svg/> 
+
+</div>
