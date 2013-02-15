@@ -1,0 +1,6 @@
+[macros/splunk-heatwave-viz%283%29]
+access = read : [ * ], write : [ admin, power, user ]
+export = system
+owner = nobody
+version = 5.0.1
+modtime = 1358555180.416796000
