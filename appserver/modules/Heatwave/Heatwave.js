@@ -311,33 +311,18 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 	},
 
     getModifiedContext: function() {
+        console.log("I GOT TO getModifiedContext")
         var context = this.getContext();
-        if (this._selection) {
-            for (key in this._selection) {
-                print(key);
-                context.set(this.drilldownPrefix + "." + key, this._selection[key]);
-            }
 
-            var searchModified = false;
+        if (true) {
             var search = context.get("search");
+            console.log("SEARCH : " + search);
 
-            var searchRange  = plot.contextTime; //search.getTimeRange();
-            // if the selection itself has a timeRange (ie this is a timechart or an event click)
-            // then we use that.
-            if (this._selection.timeRange) {
-                search.setTimeRange(this._selection.timeRange);
-                searchModified = true;
-                // otherwise, if this is a relative or realtime search.
-                // then we take the current absolute-time snapshot FROM THE JOB
-                // and use that as the drilldown timerange.
-            } else if (!searchRange.isAbsolute() && !searchRange.isAllTime()) {
-                var job = this.getContext().get("search").job;
-                search.setTimeRange(job.getTimeRange());
-                searchModified = true;
-            }
+            var searchRange  = new Splunk.TimeRange('02/19/2013:11:51:00', '02/19/2013:11:50:00');//search.getTimeRange();
+            console.log("searchRange : " + searchRange);
 
-            // push the modified search back into the context.
-            if (searchModified) context.set("search", search);
+            search.setTimeRange(searchRange);
+            context.set("search", search);
         }
         return context;
     },
