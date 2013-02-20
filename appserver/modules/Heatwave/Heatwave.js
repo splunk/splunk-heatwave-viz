@@ -14,7 +14,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             svg= d3.select("svg"),
             heatMap= svg.select("g.heatMap"),
             data= this.parseData(jString),
-            join= heatMap.selectAll("g.col").data(data, HeatMapPlot.getMeta),
+            join= heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaMouseOver),
             span= data[0]._span;
 
         if (span === undefined) {
@@ -169,7 +169,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return d._time;
     },
 
-    getMeta: function (d) {
+    getMetaMouseOver: function (d) {
+        return d._time + "," + d._span;
+    },
+
+    getMetaMouseClick: function (d) {
         return d._time + "," + d._span;
     },
 
@@ -217,9 +221,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return data;
     },
 
+    //############################################################
+    // MAIN WAVE RENDERING
+    //############################################################
+
 	initialize: function($super, container) {
 		//console.log("I GOT TO initialize");
-        	//console.log($super,container);
+        //console.log($super,container);
+
         var svg= d3.select("svg"), // d3.select(this.container).select("svg")
             heatMap= svg.append("g")
                 .attr("class","heatMap");
@@ -231,7 +240,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .attr("class", "axis y");
 
 		$super(container);
-	},
+
+        // if set to 'foo', the drilldown keys coming out of getModifiedContext() will look like "$
+        this.drilldownPrefix = this.getParam("drilldownPrefix");
+
+        //Context flow gates
+        this.doneUpstream = false;
+        this.gettingResults = false;
+
+    },
 	
 	onBeforeJobDispatched: function(search) {
 		search.setMinimumStatusBuckets(1);
@@ -240,21 +257,26 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 	
 	onJobProgress: function(event) {
 		console.log("I GOT TO onJobProgress");
-        	var context = this.getContext();
-                var search = context.get("search");
+        var context = this.getContext();
+        var search = context.get("search");
 
-		/*if (!search.job.isDone()) {
-   			search.job.pause(
-      				function() { console.log('Current job successfully paused!'); },
-      				function() { console.log('Failed to pause current job!'); } );
-		} else {
-   			console.log('Current job has already completed!');
-		}*/
-
-                //console.log("This is the search url: " + search.getUrl("events"));
+        //console.log("This is the search url: " + search.getUrl("events"));
 		//console.log("This.getResults() " + this.getResults());
 		this.getResults();
     	},
+
+    onJobDone: function(){
+        this.getResults();
+    },
+
+    onContextChange: function() {
+        var context = this.getContext();
+        if (context.get("search").job.isDone()) {
+            this.getResults();
+        } else {
+            this.doneUpstream = false;
+        }
+    },
 
 	// override
 	getResultURL: function(params) {
@@ -266,44 +288,91 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 		var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
 		//console.log("This is the uri in getResultURL " + uri);
 		return uri;
+
 	},
 
+    getResults: function($super) {
+        this.doneUpstream = true;
+        this.gettingResults = true;
+        return $super();
+    },
 
 	getResultParams: function($super) {
-		//console.log("I GOT TO getResultsParams");
 		var params = $super(); //Chartjs
         	var context = this.getContext();
-		//console.log(context);
         	var search = context.get("search");
         	var sid = search.job.getSearchId();
 	
        	 	if (!sid) this.logger.error(this.moduleType, "Assertion Failed.");
 		
         	params.sid = sid;
-		//console.log("Params: " + params);
         	return params;
 	
 	},
-	
+
+    getModifiedContext: function() {
+        var context = this.getContext();
+        if (this._selection) {
+            for (key in this._selection) {
+                print(key);
+                context.set(this.drilldownPrefix + "." + key, this._selection[key]);
+            }
+
+            var searchModified = false;
+            var search = context.get("search");
+
+            var searchRange  = plot.contextTime; //search.getTimeRange();
+            // if the selection itself has a timeRange (ie this is a timechart or an event click)
+            // then we use that.
+            if (this._selection.timeRange) {
+                search.setTimeRange(this._selection.timeRange);
+                searchModified = true;
+                // otherwise, if this is a relative or realtime search.
+                // then we take the current absolute-time snapshot FROM THE JOB
+                // and use that as the drilldown timerange.
+            } else if (!searchRange.isAbsolute() && !searchRange.isAllTime()) {
+                var job = this.getContext().get("search").job;
+                search.setTimeRange(job.getTimeRange());
+                searchModified = true;
+            }
+
+            // push the modified search back into the context.
+            if (searchModified) context.set("search", search);
+        }
+        return context;
+    },
+
+    /**
+     * override isReadyForContextPush to stop the pushes downstream
+     * when we have no selected state
+     */
+    isReadyForContextPush: function($super) {
+        //Note that here we gate any pushing of context until the main plot has
+        //completed its render.
+        if (!(this.doneUpstream)) {
+            return Splunk.Module.DEFER;
+        }
+        if (this.gettingResults) {
+            return Splunk.Module.DEFER;
+        }
+        return $super();
+    },
+
 	renderResults: function($super, jString) {
-		//console.log("I GOT TO renderResults");
 		if (!jString) {
 		 	return;
 		}
 
-		//console.log("Data: ");
-                //console.log(jString);
-				
-		var resultDict;
-		if (jString.results === undefined){
+        var resultDict;
+        if (jString.results === undefined){
 			resultsDict = eval(jString);
 		}else{			
 			resultsDict = jString.results;
 		}	
-		//console.log(resultsDict);
+
         var that= this;
 		$("document").ready(function() {
-                	that.plot(resultsDict);
-        	});
+            that.plot(resultsDict);
+        });
 	}	
 });
