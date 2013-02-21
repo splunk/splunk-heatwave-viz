@@ -49,7 +49,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .filter(same),
             allData= currentCols.data(),
             yDom= this.calculateYDomain(allData),
-            nBuckets= d3.max(allData, function (d) { return d.length; }),
+            nBuckets= (yDom[1]-yDom[0])/d3.max(allData, function (d) { return d._bucketSpan; }),
             heatMapHeight= svgH-padding,
             wishBucketHeigth= heatMapHeight / nBuckets,
             bucketHeight= wishBucketHeigth,//d3.min([d3.max([wishBucketHeigth,2]),50]),
@@ -155,7 +155,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         function place(selection) {
             selection
                 .attr("y", function(d) {
-                    return yScale(HeatMapPlot.getBucket(d)[1]) - bucketHeight;
+                    return yScale(HeatMapPlot.getBucket(d)[0]) - bucketHeight;
                 });
         }
 
@@ -305,7 +305,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 		var search = context.get("search");
 		//console.log("Search ID in getResultsURL: " + search.job.getSearchId());
 		var searchJobId = search.job.getSearchId(); 
-		var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results?output_mode=json");
+		var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
 		//console.log("This is the uri in getResultURL " + uri);
 		return uri;
 
