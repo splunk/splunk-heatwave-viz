@@ -15,6 +15,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
+        // Remove already existing columns (duplicates)
+        join.exit().remove();
+
         if (span === undefined) {
             console.log("Span is undefined!");
             return;
