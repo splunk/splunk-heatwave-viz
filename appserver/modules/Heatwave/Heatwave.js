@@ -264,15 +264,42 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
 		$super(container);
 
-        // if set to 'foo', the drilldown keys coming out of getModifiedContext() will look like "$
-        this.drilldownPrefix = this.getParam("drilldownPrefix");
-
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
 
     },
-	
+
+    onContextChange: function() {
+        var context = this.getContext();
+        if (context.get("search").job.isDone()) {
+            this.getResults();
+        } else {
+            this.doneUpstream = false;
+        }
+    },
+
+    onJobDone: function(){
+        this.getResults();
+    },
+
+    getResultURL: function(params) {
+        //console.log("I GOT TO getResultsURL");
+        var context = this.getContext();
+        var search = context.get("search");
+        //console.log("Search ID in getResultsURL: " + search.job.getSearchId());
+        var searchJobId = search.job.getSearchId();
+        var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
+        //console.log("This is the uri in getResultURL " + uri);
+        return uri;
+    },
+
+    getResults: function($super) {
+        this.doneUpstream = true;
+        this.gettingResults = true;
+        return $super();
+    },
+
 	onBeforeJobDispatched: function(search) {
 		search.setMinimumStatusBuckets(1);
 		search.setRequiredFields(["*"]);
@@ -286,84 +313,38 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         //console.log("This is the search url: " + search.getUrl("events"));
 		//console.log("This.getResults() " + this.getResults());
 		this.getResults();
-    	},
-
-    onJobDone: function(){
-        this.getResults();
-    },
-
-    onContextChange: function() {
-        var context = this.getContext();
-        if (context.get("search").job.isDone()) {
-            this.getResults();
-        } else {
-            this.doneUpstream = false;
-        }
-    },
-
-	// override
-	getResultURL: function(params) {
-		//console.log("I GOT TO getResultsURL");
-		var context = this.getContext();
-		var search = context.get("search");
-		//console.log("Search ID in getResultsURL: " + search.job.getSearchId());
-		var searchJobId = search.job.getSearchId(); 
-		var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-		//console.log("This is the uri in getResultURL " + uri);
-		return uri;
-
-	},
-
-    getResults: function($super) {
-        this.doneUpstream = true;
-        this.gettingResults = true;
-        return $super();
     },
 
 	getResultParams: function($super) {
-		var params = $super(); //Chartjs
+		var params = $super();
         	var context = this.getContext();
         	var search = context.get("search");
         	var sid = search.job.getSearchId();
 	
-       	 	if (!sid) this.logger.error(this.moduleType, "Assertion Failed.");
+       	if (!sid) this.logger.error(this.moduleType, "Assertion Failed.");
 		
-        	params.sid = sid;
-        	return params;
-	
+        params.sid = sid;
+        return params;
 	},
 
     getModifiedContext: function() {
         console.log("I GOT TO getModifiedContext")
-        var context = this.getContext();
+        var context = this.getContext(),
+            search = context.get("search"),
+            full_search = search.job.getSearch(),
+            oldTimeRange = search.getTimeRange();
+        search.abandonJob();
 
-        if (true) {
-            var search = context.get("search");
-            console.log("SEARCH : " + search);
+        console.log("OLD TIME RANGE (FORMAT) : " + oldTimeRange);
+        var searchRange  = new Splunk.TimeRange('1361303400','1361389860');//search.getTimeRange();
+        console.log("searchRange : " + searchRange);
 
-            var searchRange  = new Splunk.TimeRange('02/19/2013:11:51:00', '02/19/2013:11:50:00');//search.getTimeRange();
-            console.log("searchRange : " + searchRange);
+        search.setTimeRange(searchRange);
+        search.setBaseSearch(full_search);
+        context.set("search", search);
 
-            search.setTimeRange(searchRange);
-            context.set("search", search);
-        }
+        //this.pushContextToChildren();
         return context;
-    },
-
-    /**
-     * override isReadyForContextPush to stop the pushes downstream
-     * when we have no selected state
-     */
-    isReadyForContextPush: function($super) {
-        //Note that here we gate any pushing of context until the main plot has
-        //completed its render.
-        if (!(this.doneUpstream)) {
-            return Splunk.Module.DEFER;
-        }
-        if (this.gettingResults) {
-            return Splunk.Module.DEFER;
-        }
-        return $super();
     },
 
 	renderResults: function($super, jString) {
@@ -382,5 +363,24 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 		$("document").ready(function() {
             that.plot(resultsDict);
         });
-	}	
+
+        //Done with the results
+        this.gettingResults = false;
+	},
+
+    //pushContextToChildren: function($super){
+
+    //},
+
+    isReadyForContextPush: function($super) {
+        //Note that here we gate any pushing of context until the main plot has
+        //completed its render.
+        if (!(this.doneUpstream)) {
+            return Splunk.Module.DEFER;
+        }
+        if (this.gettingResults) {
+            return Splunk.Module.DEFER;
+        }
+        return $super();
+    }
 });
