@@ -8,6 +8,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             return;
         }
 
+
         const durationTime = 500, size= 10, xoff= 100, padding= 50, colorOffset=1;
 
         var HeatMapPlot= this,
@@ -15,7 +16,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
-        // Remove already existing columns (duplicates)
+        // Remove already existing columns (duplicates). This should be added to the filter method instead.
         join.exit().remove();
 
         if (span === undefined) {
@@ -28,20 +29,27 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             heatMapWidth= svgW-xoff*2,
             xDom= d3.extent(data, HeatMapPlot.getTime);
 
-        if (HeatMapPlot.xScale === undefined){ //special case on first call
-            var tmp= HeatMapPlot.calcTimeLowerBound(xDom[0], heatMapWidth, size, span);
-            HeatMapPlot.xScale= this.calculateXScale([tmp, xDom[0]], heatMapWidth);
-        }
+//        if (HeatMapPlot.xScale === undefined){ //special case on first call
+//            var tmp= HeatMapPlot.calcTimeLowerBound(xDom[0], heatMapWidth, size, span);
+//            HeatMapPlot.xScale= this.calculateXScale([tmp, xDom[0]], heatMapWidth);
+//        }
+//
+//        var timeLowerBound= HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span),
+//            xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
 
-        var timeLowerBound= HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span),
-            xScale= this.calculateXScale([timeLowerBound, xDom[1]], heatMapWidth);
+        var columnsRequired = xDom[1].getTime()-xDom[0].getTime();
+        // Use time range to calculate the window that has to be used as x-scale. You can then calculate the appropriate columnwidth
+        console.log("time range: ",this.getTimeRange());
+
+        var timeLowerBound = xDom[0];//HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span);
+        HeatMapPlot.xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
 
         var newColumns= addColumns(join);
 
         var xAxis= d3.svg.axis()
-            .scale(xScale)
+            .scale(HeatMapPlot.xScale)
             .orient("bottom")
-            .ticks(3)
+            .ticks(Math.min(5,(data.length/2)))
             .tickSubdivide(10)
             .tickSize(6,3,3);
 
@@ -136,7 +144,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         function move(selection) {
             selection
                 .transition().duration(durationTime).ease("linear")
-                .attr("transform", function (d) { return "translate(" + xScale(d._time) + ",0)"; })
+                .attr("transform", function (d) { return "translate(" + HeatMapPlot.xScale(d._time) + ",0)"; })
                 .attr("opacity", 1);
         }
 
@@ -162,7 +170,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 });
         }
 
-        HeatMapPlot.xScale= xScale;
+        //HeatMapPlot.xScale= xScale;
     },
 
     calculateYDomain: function(data){
@@ -184,7 +192,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     calcTimeLowerBound: function(time, length, size, span) {
-        return new Date(time.getTime() - (length / size) * span * 1000)
+        time = time.getTime();
+        var date = time - (length / size) * span * 1000;
+        return new Date(date);
     },
 
     getTime: function (d) {
@@ -242,6 +252,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         //console.log(data)
         return data;
+    },
+
+    getTimeRange: function() {
+        return this.getContext().get("search").getTimeRange();
     },
 
     //############################################################
