@@ -8,7 +8,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             return;
         }
 
-        const durationTime = 500, size= 10, yoff= 20, xoff= 100, padding= 50, colorOffset=1;
+        const durationTime = 500, size= 10, xoff= 100, padding= 50, colorOffset=1;
 
         var HeatMapPlot= this,
             data= this.parseData(jString),
@@ -64,12 +64,12 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var yAxis= d3.svg.axis()
             .scale(yScale)
             .orient("left")
-            .ticks(nBuckets)
+            .ticks(Math.min(nBuckets,10))
             .tickSubdivide(0)
             .tickSize(6,3,3);
 
         this.heatMap.transition().duration(durationTime).ease("linear")
-            .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding) + ")");
+            .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         this.heatMap.select("g.axis.y").transition().duration(durationTime).ease("linear")
             .call(yAxis);
