@@ -393,7 +393,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         search.setBaseSearch(full_search);
         context.set("search", search);
 
-        this.pushContextToChildren(context);
+        if(this.doneUpstream && this.gettingResults){
+            console.log("in the if statement")
+            this.pushContextToChildren(context);
+        }
         return context;
     },
 
