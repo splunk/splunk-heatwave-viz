@@ -108,7 +108,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 join= rect.data(colData, HeatMapPlot.getBucketStr);
 
             join.enter().insert("rect")
-                .on("click", function(d) { console.log(d3.select(this).select("title").text()); } )
+                .on("click", function(d) {
+                    HeatMapPlot.setMetaData(d3.select(this).select("title").text(),d3.select(this).select("title").text());
+                })
                 .call(place)
                 .call(shape)
                 .append("title")
@@ -205,11 +207,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return d._time + "," + d._span;
     },
 
-    getMetaMouseClick: function (d) {
-        console.log(d._time, d._span)
-        return d._time + "," + d._span;
-    },
-
     toTime: function (t){
         var st= t.indexOf("=");
         return new Date(t.substring(st+1))
@@ -278,10 +275,50 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
 		$super(container);
 
+        //Time range parameters
+        this.epochTimeRange;
+        this.metaTimeOne = "";
+        this.metaTimeTwo = "";
+
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
 
+    },
+
+    parseMetaData: function(metaData){
+        var pattern = /([^\(]+)/;
+        var time = metaData.split(pattern);
+        return time[1];
+    },
+
+    metaTimeToEpoch: function(metaData){
+        var newDate = new Date(metaData.toString());
+        return newDate.getTime()/1000.0;
+    },
+
+    setMetaData: function(metaDataFromClickOne, metaDataFromClickTwo){
+
+        this.metaTimeOne = metaDataFromClickOne;
+        this.metaTimeTwo = metaDataFromClickTwo;
+        var epochTimeOne = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeOne));
+        var epochTimeTwo = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeTwo));
+
+        if(epochTimeOne.valueOf() === epochTimeTwo.valueOf()){
+            //var seconds = epochTimeTwo.getSeconds();
+            //seconds++;
+            //epochTimeTwo.setSeconds(seconds);
+            console.log(epochTimeTwo);
+            epochTimeTwo++;
+            console.log(epochTimeTwo);
+        }
+        else if(epochTimeOne.valueOf() < epochTimeTwo.valueOf()){
+            console.log(this.epochTimeRange);
+            this.epochTimeRange = new Splunk.TimeRange(epochTimeOne,epochTimeTwo);
+            console.log(this.epochTimeRange);
+        }else{
+            this.epochTimeRange = new Splunk.TimeRange(epochTimeTwo,epochTimeOne);
+        }
     },
 
     onContextChange: function() {
@@ -350,14 +387,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         search.abandonJob();
 
         console.log("OLD TIME RANGE (FORMAT) : " + oldTimeRange);
-        var searchRange  = new Splunk.TimeRange('1361303400','1361389860');//search.getTimeRange();
+        var searchRange  = new Splunk.TimeRange('1361303400','1361303460');//this.epochTimeRange
         console.log("searchRange : " + searchRange);
 
         search.setTimeRange(searchRange);
         search.setBaseSearch(full_search);
         context.set("search", search);
 
-        //this.pushContextToChildren();
+        this.pushContextToChildren(context);
         return context;
     },
 
