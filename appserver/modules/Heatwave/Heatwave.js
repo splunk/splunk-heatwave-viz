@@ -301,22 +301,16 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     setMetaData: function(metaDataFromClickOne, metaDataFromClickTwo){
 
         this.metaTimeOne = metaDataFromClickOne;
-        this.metaTimeTwo = metaDataFromClickTwo;
         var epochTimeOne = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeOne));
+
+        this.metaTimeTwo = metaDataFromClickTwo;
         var epochTimeTwo = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeTwo));
 
         if(epochTimeOne.valueOf() === epochTimeTwo.valueOf()){
-            //var seconds = epochTimeTwo.getSeconds();
-            //seconds++;
-            //epochTimeTwo.setSeconds(seconds);
-            console.log(epochTimeTwo);
             epochTimeTwo++;
-            console.log(epochTimeTwo);
         }
         if(epochTimeOne.valueOf() < epochTimeTwo.valueOf()){
-            console.log(this.epochTimeRange);
             this.epochTimeRange = new Splunk.TimeRange(epochTimeOne,epochTimeTwo);
-            console.log(this.epochTimeRange);
         }else{
             this.epochTimeRange = new Splunk.TimeRange(epochTimeTwo,epochTimeOne);
         }
