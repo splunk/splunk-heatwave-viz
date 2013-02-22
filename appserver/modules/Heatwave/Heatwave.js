@@ -20,7 +20,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         join.exit().remove();
 
         if (span === undefined) {
-            console.log("Span is undefined!");
+            console.log("ERROR - Span is undefined!");
             return;
         }
 
@@ -39,7 +39,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var columnsRequired = xDom[1].getTime()-xDom[0].getTime();
         // Use time range to calculate the window that has to be used as x-scale. You can then calculate the appropriate columnwidth
-        console.log("time range: ",this.getTimeRange());
+        //console.log("time range: ",this.getTimeRange());
 
         var timeLowerBound = xDom[0];//HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span);
         HeatMapPlot.xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
@@ -69,8 +69,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             color= d3.scale.log().domain(colorDom).range(["white","#CC0000"]),
             yScale= this.calculateYScale(yDom, heatMapHeight);
 
-        console.log("yDomain", yDom, heatMapHeight)
-        console.log("Splunks data", data)
+        //console.log("yDomain", yDom, heatMapHeight)
+        //console.log("Splunks data", data)
 
         var yAxis= d3.svg.axis()
             .scale(yScale)
@@ -109,8 +109,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
             join.enter().insert("rect")
                 .on("click", function(d) {
-                    var metaData = d3.select(this).select("title").text();
-                    HeatMapPlot.setMetaData(metaData,metaData);
+                    var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
+                        epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData));
+                    HeatMapPlot.setMetaData(epoch, epoch + span);
                 })
                 .call(place)
                 .call(shape)
@@ -169,7 +170,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         function place(selection) {
             selection
                 .attr("y", function(d) {
-                    return yScale(HeatMapPlot.getBucket(d)[0]) - bucketHeight;
+                    return yScale(HeatMapPlot.getBucket(d)[1]);
                 });
         }
 
@@ -278,8 +279,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         //Time range parameters
         this.epochTimeRange;
-        this.metaTimeOne = "";
-        this.metaTimeTwo = "";
 
         //Context flow gates
         this.doneUpstream = false;
@@ -298,22 +297,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return newDate.getTime()/1000.0;
     },
 
-    setMetaData: function(metaDataFromClickOne, metaDataFromClickTwo){
+    setMetaData: function(epochStart, epochEnd){
 
-        this.metaTimeOne = metaDataFromClickOne;
-        var epochTimeOne = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeOne));
-
-        this.metaTimeTwo = metaDataFromClickTwo;
-        var epochTimeTwo = this.metaTimeToEpoch(this.parseMetaData(this.metaTimeTwo));
-
-        if(epochTimeOne.valueOf() === epochTimeTwo.valueOf()){
-            epochTimeTwo++;
-        }
-        if(epochTimeOne.valueOf() < epochTimeTwo.valueOf()){
-            this.epochTimeRange = new Splunk.TimeRange(epochTimeOne,epochTimeTwo);
-        }else{
-            this.epochTimeRange = new Splunk.TimeRange(epochTimeTwo,epochTimeOne);
-        }
+        this.epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
     },
 
     onContextChange: function() {
@@ -352,7 +338,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 	},
 	
 	onJobProgress: function(event) {
-		console.log("I GOT TO onJobProgress");
+		//console.log("I GOT TO onJobProgress");
         var context = this.getContext();
         var search = context.get("search");
 
@@ -374,20 +360,20 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 	},
 
     getModifiedContext: function() {
-        console.log("I GOT TO getModifiedContext")
+        //console.log("I GOT TO getModifiedContext")
         var context = this.getContext(),
             search = context.get("search"),
             full_search = search.job.getSearch(),
             oldTimeRange = search.getTimeRange();
         search.abandonJob();
 
-        console.log("OLD TIME RANGE (FORMAT) : " + oldTimeRange);
+        //console.log("OLD TIME RANGE (FORMAT) : " + oldTimeRange);
         if(typeof this.epochTimeRange !== "undefined"){
             var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
         }else{
             var searchRange = search.getTimeRange();
         }
-        console.log("searchRange : " + searchRange);
+        //console.log("searchRange : " + searchRange);
 
         search.setTimeRange(searchRange);
         search.setBaseSearch(full_search);
