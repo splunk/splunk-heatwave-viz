@@ -9,14 +9,16 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
 
-        const durationTime = 500, size= 10, xoff= 100, padding= 50, colorOffset=1;
+        const durationTime = 500, xoff= 100, padding= 50, colorOffset=1;
+
 
         var HeatMapPlot= this,
-            data= this.parseData(jString),
-            join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
+            data = this.parseData(jString);
+
+        var join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
-        // Remove already existing columns (duplicates). This should be added to the filter method instead.
+        // Remove already existing columns (only duplicates).
         join.exit().remove();
 
         if (span === undefined) {
@@ -29,17 +31,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             heatMapWidth= svgW-xoff*2,
             xDom= d3.extent(data, HeatMapPlot.getTime);
 
-//        if (HeatMapPlot.xScale === undefined){ //special case on first call
-//            var tmp= HeatMapPlot.calcTimeLowerBound(xDom[0], heatMapWidth, size, span);
-//            HeatMapPlot.xScale= this.calculateXScale([tmp, xDom[0]], heatMapWidth);
-//        }
-//
-//        var timeLowerBound= HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span),
-//            xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
+
+        const size = heatMapWidth/data.length;
 
         var columnsRequired = xDom[1].getTime()-xDom[0].getTime();
-        // Use time range to calculate the window that has to be used as x-scale. You can then calculate the appropriate columnwidth
-        //console.log("time range: ",this.getTimeRange());
 
         var timeLowerBound = xDom[0];//HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span);
         HeatMapPlot.xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
