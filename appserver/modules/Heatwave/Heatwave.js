@@ -109,7 +109,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
             join.enter().insert("rect")
                 .on("click", function(d) {
-                    HeatMapPlot.setMetaData(d3.select(this).select("title").text(),d3.select(this).select("title").text());
+                    var metaData = d3.select(this).select("title").text();
+                    HeatMapPlot.setMetaData(metaData,metaData);
                 })
                 .call(place)
                 .call(shape)
@@ -312,7 +313,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             epochTimeTwo++;
             console.log(epochTimeTwo);
         }
-        else if(epochTimeOne.valueOf() < epochTimeTwo.valueOf()){
+        if(epochTimeOne.valueOf() < epochTimeTwo.valueOf()){
             console.log(this.epochTimeRange);
             this.epochTimeRange = new Splunk.TimeRange(epochTimeOne,epochTimeTwo);
             console.log(this.epochTimeRange);
@@ -387,7 +388,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         search.abandonJob();
 
         console.log("OLD TIME RANGE (FORMAT) : " + oldTimeRange);
-        var searchRange  = new Splunk.TimeRange('1361303400','1361303460');//this.epochTimeRange
+        if(typeof this.epochTimeRange !== "undefined"){
+            var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
+        }else{
+            var searchRange = search.getTimeRange();
+        }
         console.log("searchRange : " + searchRange);
 
         search.setTimeRange(searchRange);
