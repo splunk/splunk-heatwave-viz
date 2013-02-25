@@ -54,7 +54,14 @@
                         <param name="enable">true</param>
                         <param name="display">false</param>
                         <module name="Heatwave" layoutPanel="panel_row1_col1">
-                            <module name="SimpleResultsTable" layoutPanel="panel_row2_col1"></module>
+                            <module name="Paginator" layoutPanel="panel_row3_col1">
+                                <param name="entityName">results</param>
+
+                                <module name="SimpleResultsTable">
+                                    <param name="entityName">results</param>
+                                </module>
+
+                            </module>
                         </module>
                     </module>
                     <!-- close EnablePreview -->
