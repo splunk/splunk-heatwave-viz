@@ -127,17 +127,23 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 join= rect.data(colData, HeatMapPlot.getBucketStr);
 
             join.enter().insert("rect")
-                .on("click", function(d) {
+                .on("mouseover", function(){
+                    d3.select(this).style("fill", "lightblue")
+                })
+                .on("click", function(){
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
                         epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData));
                     HeatMapPlot.setMetaData(epoch, epoch + span);
-
                 })
                 .call(place)
                 .call(shape)
                 //.style("stroke","white") Instead of padding each column a stroke can be used.
                 .append("title")
                 .call(title, colData);
+
+            join.on("mouseout", function(d){
+                d3.select(this).style("fill", toColor(d))
+            });
 
             join.transition().duration(durationTime).ease("linear")
                 .style("fill", toColor)
@@ -316,6 +322,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     setMetaData: function(epochStart, epochEnd){
         this.epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
+        console.log(epochStart,epochEnd);
 
         var context = this.getContext(),
             search = context.get("search");
