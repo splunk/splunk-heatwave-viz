@@ -15,8 +15,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var HeatMapPlot= this,
             data = this.parseData(jString);
 
+
         var join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
+
 
         // Remove already existing columns (only duplicates).
         join.exit().remove();
@@ -31,10 +33,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             heatMapWidth= svgW-xoff*2,
             xDom= d3.extent(data, HeatMapPlot.getTime);
 
+        // Remove first column (splunk sends empty bin)
+        // This is done here because xDom needs to be calculated with the first column (so that the
+        // time span can be shifted in the code below.
+        data.splice(0,1);
 
-        const size = heatMapWidth/data.length;
 
-        var columnsRequired = xDom[1].getTime()-xDom[0].getTime();
+        // leave 1 pixel for space between columns
+        const size = (heatMapWidth/data.length)-1;
+
+        // Shift the xDomain 1 column to the right.
+        var xSpan = (xDom[1].getTime()-xDom[0].getTime())/data.length;
+        xDom[0] = new Date(xDom[0].getTime()+xSpan);
+        xDom[1] = new Date(xDom[1].getTime()+xSpan);
 
         var timeLowerBound = xDom[0];//HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span);
         HeatMapPlot.xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
@@ -108,6 +119,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 })
                 .call(place)
                 .call(shape)
+                //.style("stroke","white") Instead of padding each column a stroke can be used.
                 .append("title")
                 .call(title, colData);
 
@@ -131,7 +143,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function inRange(d) {
-            return d._time > timeLowerBound && d._time < xDom[1];
+            return d._time >= timeLowerBound && d._time <= xDom[1];
         }
 
         function same(d) {
@@ -204,7 +216,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     toTime: function (t){
         var st= t.indexOf("=");
-        return new Date(t.substring(st+1))
+        return (t.substring(st+1))
     },
 
     getBucket: function (d){
