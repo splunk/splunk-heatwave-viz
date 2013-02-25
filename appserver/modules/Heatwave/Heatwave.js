@@ -64,9 +64,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             color= d3.scale.log().domain(colorDom).range(["white","#CC0000"]),
             yScale= this.calculateYScale(yDom, heatMapHeight);
 
-        //console.log("yDomain", yDom, heatMapHeight)
-        //console.log("Splunks data", data)
-
         var yAxis= d3.svg.axis()
             .scale(yScale)
             .orient("left")
@@ -107,6 +104,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
                         epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData));
                     HeatMapPlot.setMetaData(epoch, epoch + span);
+
                 })
                 .call(place)
                 .call(shape)
@@ -257,9 +255,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     //############################################################
 
     initialize: function($super, container) {
-        //console.log("I GOT TO initialize");
-        //console.log($super,container);
-
         this.svg= d3.select("svg"); // d3.select(this.container).select("svg")
         this.heatMap= this.svg.append("g")
             .attr("class","heatMap");
@@ -298,7 +293,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
 
         this.getModifiedContext();
-
     },
 
     onJobDone: function(){
@@ -307,18 +301,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getResultURL: function(params) {
-        //console.log("I GOT TO getResultsURL");
         var context = this.getContext();
         var search = context.get("search");
-        //console.log("Search ID in getResultsURL: " + search.job.getSearchId());
         var searchJobId = search.job.getSearchId();
+
         var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-        //console.log("This is the uri in getResultURL " + uri);
         return uri;
     },
 
     getResults: function($super) {
-        console.log("I got to getResults");
         this.doneUpstream = true;
         this.gettingResults = true;
         return $super();
@@ -330,13 +321,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onJobProgress: function(event) {
-        console.log("I got to onJobProgress");
-        //console.log("I GOT TO onJobProgress");
         var context = this.getContext();
         var search = context.get("search");
 
-        //console.log("This is the search url: " + search.getUrl("events"));
-        //console.log("This.getResults() " + this.getResults());
         this.getResults();
     },
 
@@ -353,11 +340,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getModifiedContext: function() {
-        console.log("I got to getModifiedContext");
 
         var context = this.getContext(),
-            search = context.get("search"),
-            full_search = search.job.getSearch();
+            search = context.get("search");
 
         if(typeof this.epochTimeRange !== "undefined"){
             var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
@@ -365,14 +350,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             var searchRange = search.getTimeRange();
         }
 
+        search.abandonJob();
         search.setTimeRange(searchRange);
-        search.setBaseSearch(full_search);
         context.set("search", search);
 
         if(this.doneUpstream && !(this.gettingResults)){
-            console.log("in the if statement");
-            console.log("doneUpstream: " + this.doneUpstream + ", gettingResults: " + this.gettingResults);
-            console.log("this.epochTimeRange : " + this.epochTimeRange);
             this.pushContextToChildren(context);
         }
 
@@ -380,10 +362,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onContextChange: function() {
-        console.log("I got to onContextChange")
         var context = this.getContext();
         if (context.get("search").job.isDone()) {
-            console.log("onContextChange: I am returning the results since the job is done.")
             this.getResults();
         } else {
             this.doneUpstream = false;
@@ -391,7 +371,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     pushContextToChildren: function($super, explicitContext){
-        console.log("I got to pushContextToChildren");
         this.setChildContextFreshness(true);
         return $super(explicitContext);
     },
@@ -413,18 +392,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             that.plot(resultsDict);
         });
 
-        console.log("renderResults: still getting results");
         this.gettingResults = false;
     },
 
     isReadyForContextPush: function($super) {
         //Note that here we gate any pushing of context until the main plot has
         //completed its render.
-        console.log("isReadyForContextPush - doneUpstream: " + this.doneUpstream);
         if (!(this.doneUpstream)) {
             return Splunk.Module.DEFER;
         }
-        console.log("isReadyForContextPush - gettingResults: " + this.gettingResults);
         if (this.gettingResults) {
             return Splunk.Module.DEFER;
         }
