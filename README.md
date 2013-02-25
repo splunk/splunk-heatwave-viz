@@ -8,7 +8,7 @@ Splunk is the premier technology for gaining Operational Intelligence on Machine
 can handle large volume of data at a fast rate, often times users will only want to analyze
 recent data, and data that is beyond a certain range, or data in realtime.
 
-splunk-heatwave-viz is a visualization tool for data with fluctuating metrics on a continual basis.
+Splunk-heatwave-viz is a visualization tool for data with fluctuating metrics on a continual basis.
 Enabeling users to visualize for example latency data by a bucket-interval over a time-interval
 where the intensity of events is represented as a heatmap throughout the buckets.
 
@@ -21,18 +21,21 @@ Installation:
 Searches:
 ---------
 
- The application comes with its own search macro called "timelineheatmap". That buckets
+ The application comes with its own search macro called "heatwave". That buckets
  your data on a format usable for the visualization in d3. The macro takes three arguments,
- a target_to_measure, a max_buckets, and a time_span.
+ a target_to_measure, a max_buckets, and a span.
 
-        `timelineheatmap(target_to_measure,max_buckets,time_span)`
+        `heatwave(target_to_measure,max_buckets,span)`
 
  It is used at the end of your query as in the following example.
 
- index="os" sourcetype="ps" | multikv fields pctCPU | stats sum(pctCPU) as pctCPU by _time |
- `timelineheatmap(pctCPU,30,10s)`
+	index="os" sourcetype=ps | multikv | search COMMAND=Google | 
+	stats sum(RSZ_KB) as total_mem by _time | `heatwave(total_mem,200,10000)`
 
  You filter out a field target to measure over time (numeric value over time),
- then specify max number of data buckets, and the length of the time span to use.
+ then specify max number of data buckets, and the size of the span.
  Note that these are relative to both the amount of data you are pushing into the
  visualization and the time range you set in the time range picker.
+
+ You can also implement the module heatwave in itself on your own dashboards which will
+ give you access to its powerfull visualization as well as drilldown functionaloty. 
