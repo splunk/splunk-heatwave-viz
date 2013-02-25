@@ -287,19 +287,34 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     setMetaData: function(epochStart, epochEnd){
-
-        console.log("epochStart: "+ epochStart);
-        console.log("epochEnd: " + epochEnd);
         this.epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
 
-        this.getModifiedContext();
+        var context = this.getContext(),
+            search = context.get("search");
+        search.abandonJob();
+
+        if(typeof this.epochTimeRange !== "undefined"){
+            var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
+        }else{
+            var searchRange = search.getTimeRange();
+        }
+
+        search.setTimeRange(searchRange);
+        context.set("search", search);
+
+        if(this.doneUpstream && !(this.gettingResults)){
+            this.pushContextToChildren(context);
+        }
     },
 
     onJobDone: function(){
-        console.log("I got to onJobDone");
         this.getResults();
     },
 
+    onJobProgress: function(event) {
+        this.getResults();
+    },
+    
     getResultURL: function(params) {
         var context = this.getContext();
         var search = context.get("search");
@@ -320,13 +335,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         search.setRequiredFields(["*"]);
     },
 
-    onJobProgress: function(event) {
-        var context = this.getContext();
-        var search = context.get("search");
-
-        this.getResults();
-    },
-
     getResultParams: function($super) {
         var params = $super();
         var context = this.getContext();
@@ -340,25 +348,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getModifiedContext: function() {
-
-        var context = this.getContext(),
-            search = context.get("search");
-
-        if(typeof this.epochTimeRange !== "undefined"){
-            var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
-        }else{
-            var searchRange = search.getTimeRange();
-        }
-
-        search.abandonJob();
-        search.setTimeRange(searchRange);
-        context.set("search", search);
-
-        if(this.doneUpstream && !(this.gettingResults)){
-            this.pushContextToChildren(context);
-        }
-
-        return context;
+        return this.getContext();
     },
 
     onContextChange: function() {
@@ -371,7 +361,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     pushContextToChildren: function($super, explicitContext){
-        this.setChildContextFreshness(true);
         return $super(explicitContext);
     },
 
@@ -396,15 +385,12 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     isReadyForContextPush: function($super) {
-        //Note that here we gate any pushing of context until the main plot has
-        //completed its render.
         if (!(this.doneUpstream)) {
             return Splunk.Module.DEFER;
         }
         if (this.gettingResults) {
             return Splunk.Module.DEFER;
         }
-        this.setChildContextFreshness(false);
         return Splunk.Module.CONTINUE;
     }
 });
