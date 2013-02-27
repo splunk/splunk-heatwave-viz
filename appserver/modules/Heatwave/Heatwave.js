@@ -124,7 +124,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         function updateRects(colData) {
             var rect= d3.select(this).selectAll("rect"),
-                join= rect.data(colData, HeatMapPlot.getBucketStr);
+                join= rect.data(colData, HeatMapPlot.getBucket);
 
             join.enter().insert("rect")
                 .on("mouseover", function(){
@@ -241,42 +241,37 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return (t.substring(st+1))
     },
 
-    getBucket: function (d){
-        var a= d.indexOf("-"),
-            b= d.indexOf("=");
-        return [parseFloat(d.substring(0,a)), parseFloat(d.substring(a+1,b))];
+    getBucketFromStr: function (str){
+        var dash= str.indexOf("-");
+        return [parseFloat(str.substring(0,dash)), parseFloat(str.substring(dash+1))];
     },
 
-    getBucketStr: function (d) {
-        return d.substring(0,d.indexOf("="))
+    getBucket: function (d) {
+        return [d[0], d[1]];
     },
 
-    getValue: function (d){
-        var st= d.indexOf("=");
-        return eval(d.substring(st+1));
+    getValue: function (d) {
+        return d[2];
     },
 
     parseData: function(jString) {
-
         var data= [];
         //sort data according to bucket values
         for(var col=0; col<jString.length; col++){
             var tmp= [];
             for(var bucket in jString[col]){
                 if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
-                    tmp.push(bucket + "=" + jString[col][bucket]);
+                    var tmpBucket= this.getBucketFromStr(bucket);
+                    tmp.push([tmpBucket[0], tmpBucket[1], parseFloat(jString[col][bucket])]);
                 }
             }
-            tmp.sort(function(a, b) { return parseFloat(a) - parseFloat(b); });
             tmp._time= new Date(jString[col]._time);
             tmp._span= eval(jString[col]._span);
             tmp._extent= d3.extent(tmp, this.getValue);
-            var firstBucket= this.getBucket(tmp[0]);
+            var firstBucket= tmp[0];
             tmp._bucketSpan= firstBucket[1]-firstBucket[0];
             data.push(tmp);
         }
-
-        //console.log(data)
         return data;
     },
 
