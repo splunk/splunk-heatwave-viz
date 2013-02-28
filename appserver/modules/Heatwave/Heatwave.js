@@ -46,55 +46,31 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var svgW= parseInt(this.svg.style("width")),
             svgH= parseInt(this.svg.style("height")),
-            heatMapWidth= svgW-xoff*2,
-            xDom= d3.extent(data, HeatMapPlot.getTime);
+            heatMapHeight= svgH-padding,
+            heatMapWidth= svgW-xoff*2;
 
         // Remove first column (splunk sends empty bin)
         // This is done here because xDom needs to be calculated with the first column (so that the
         // time span can be shifted in the code below.
         data.splice(0,1);
 
-
-        // leave 1 pixel for space between columns
-        const size = (heatMapWidth/data.length)-1;
-
-        // Shift the xDomain 1 column to the right.
-        var xSpan = (xDom[1].getTime()-xDom[0].getTime())/data.length;
-        xDom[0] = new Date(xDom[0].getTime()+xSpan);
-        xDom[1] = new Date(xDom[1].getTime()+xSpan);
-
-        var timeLowerBound = xDom[0];//HeatMapPlot.calcTimeLowerBound(xDom[1], heatMapWidth, size, span);
-        HeatMapPlot.xScale= this.calculateXScale([xDom[0], xDom[1]], heatMapWidth);
+        this.updateXScale(data, heatMapWidth, heatMapHeight);
 
         var newColumns= addColumns(join);
-
-        var xAxis= d3.svg.axis()
-            .scale(HeatMapPlot.xScale)
-            .orient("bottom")
-            .ticks(Math.min(5,(data.length/2)))
-            .tickSubdivide(10)
-            .tickSize(6,3,3);
 
         var bucketSpan= data[0]._bucketSpan,
             currentCols= this.heatMap
                 .selectAll("g.col")
                 .filter(inRange)
                 .filter(same),
-            allData= currentCols.data(),
-            heatMapHeight= svgH-padding,
-            colorDom= [d3.min(allData, function (d) { return d._extent[0]; }) + colorOffset,
-                d3.max(allData, function (d){ return d._extent[1]; }) + colorOffset],
+            colorDom= [d3.min(data, function (d) { return d._extent[0]; }) + colorOffset,
+                d3.max(data, function (d){ return d._extent[1]; }) + colorOffset],
             color= d3.scale.log().domain(colorDom).range(["white","#CC0000"]);
 
-        this.updateYScale(allData, heatMapHeight);
+        this.updateYScale(data, heatMapHeight);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
-
-
-        this.heatMap.select("g.axis.x").transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(0," + (heatMapHeight + 1) + ")")
-            .call(xAxis);
 
         currentCols.each(updateRects)
             .call(move);
@@ -153,7 +129,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function inRange(d) {
-            return d._time >= timeLowerBound && d._time <= xDom[1];
+            return d._time >= HeatMapPlot.xDom[0] && d._time <= HeatMapPlot.xDom[1];
         }
 
         function same(d) {
@@ -175,7 +151,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         function shape(selection) {
             selection
-                .attr("width", size)
+                .attr("width", HeatMapPlot.bucketWidth)
                 .attr("height", HeatMapPlot.bucketHeight)
                 .style("fill", toColor);
             //.style("stroke", toColor)
@@ -220,7 +196,29 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .call(yAxis);
     },
 
-    updateXScale: function(domain, width) {
+    updateXScale: function(data, width, height) {
+        this.xDom= d3.extent(data, this.getTime);
+
+        // leave 1 pixel for space between columns
+        this.bucketWidth = (width/data.length)-1;
+
+        // Shift the xDomain 1 column to the right.
+        var xSpan = (this.xDom[1].getTime()-this.xDom[0].getTime())/data.length;
+        this.xDom[0] = new Date(this.xDom[0].getTime()+xSpan);
+        this.xDom[1] = new Date(this.xDom[1].getTime()+xSpan);
+
+        this.xScale= this.calculateXScale([this.xDom[0], this.xDom[1]], width);
+
+        var xAxis= d3.svg.axis()
+            .scale(this.xScale)
+            .orient("bottom")
+            .ticks(Math.min(5,(data.length/2)))
+            .tickSubdivide(10)
+            .tickSize(6,3,3);
+
+        this.heatMap.select("g.axis.x").transition().duration(this.durationTime).ease("linear")
+            .attr("transform", "translate(0," + (height + 1) + ")")
+            .call(xAxis);
 
     },
 
