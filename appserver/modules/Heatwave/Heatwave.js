@@ -25,7 +25,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
 
-        var xoff= 100, padding= 50, colorOffset=1;
+        var xoff= 100, padding= 50;
 
 
         var HeatMapPlot= this,
@@ -34,10 +34,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
-
-
-        // Remove already existing columns (only duplicates).
-        join.exit().remove();
 
         if (span === undefined) {
             console.log("ERROR - Span is undefined!");
@@ -52,7 +48,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         // Remove first column (splunk sends empty bin)
         // This is done here because xDom needs to be calculated with the first column (so that the
         // time span can be shifted in the code below.
-        data.splice(0,1);
+        //data.splice(0,1);
 
         this.updateXScale(data, heatMapWidth, heatMapHeight);
 
@@ -62,12 +58,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             currentCols= this.heatMap
                 .selectAll("g.col")
                 .filter(inRange)
-                .filter(same),
-            colorDom= [d3.min(data, function (d) { return d._extent[0]; }) + colorOffset,
-                d3.max(data, function (d){ return d._extent[1]; }) + colorOffset],
-            color= d3.scale.log().domain(colorDom).range(["white","#CC0000"]);
+                .filter(same);
 
         this.updateYScale(data, heatMapHeight);
+        this.updateColorScale(data);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
@@ -125,7 +119,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function toColor(d) {
-            return color(HeatMapPlot.getValue(d) + colorOffset);
+            return HeatMapPlot.colorScale(HeatMapPlot.getValue(d) + HeatMapPlot.colorOffset);
         }
 
         function inRange(d) {
@@ -197,23 +191,20 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     updateXScale: function(data, width, height) {
-        this.xDom= d3.extent(data, this.getTime);
+
+        this.updateXDom(data);
 
         // leave 1 pixel for space between columns
-        this.bucketWidth = (width/data.length)-1;
+        var nColumns= (this.xDom[1].getTime() - this.xDom[0].getTime()) / (data[0]._span * 1000);
+        this.bucketWidth = (width / nColumns)-1;
 
-        // Shift the xDomain 1 column to the right.
-        var xSpan = (this.xDom[1].getTime()-this.xDom[0].getTime())/data.length;
-        this.xDom[0] = new Date(this.xDom[0].getTime()+xSpan);
-        this.xDom[1] = new Date(this.xDom[1].getTime()+xSpan);
-
-        this.xScale= this.calculateXScale([this.xDom[0], this.xDom[1]], width);
+        this.xScale= this.calculateXScale(this.xDom, width);
 
         var xAxis= d3.svg.axis()
             .scale(this.xScale)
             .orient("bottom")
-            .ticks(Math.min(5,(data.length/2)))
-            .tickSubdivide(10)
+            .ticks(10)
+            .tickSubdivide(nColumns / 9)
             .tickSize(6,3,3);
 
         this.heatMap.select("g.axis.x").transition().duration(this.durationTime).ease("linear")
@@ -222,8 +213,49 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     },
 
+    addTime: function(date, time) {
+        return new Date(date.getTime() + time);
+    },
+
+    shiftXDomain: function(time) {
+        this.xDom[1]= this.addTime(this.xDom[1], time);
+        this.xDom[0]= this.addTime(this.xDom[0], time);
+    },
+
+    updateXDom: function(data){
+        var newXDom= d3.extent(data, this.getTime);
+
+        if (!this.xDom)
+        {
+            this.xDom= newXDom;
+
+            // Shift the xDomain 1 column to the right.
+            this.shiftXDomain(data[0]._span * 1000);
+        }
+        else
+        {
+            // Include more data
+            if (newXDom[0] < this.xDom[0]){
+                this.xDom[0]= newXDom[0];
+            }
+
+            // Sift if realtime data appears
+            if (newXDom[1] > this.xDom[1]){
+                var time= newXDom[1].getTime() - this.xDom[1].getTime();
+                this.shiftXDomain(time);
+            }
+        }
+    },
+
     calculateXScale: function(domain, width) {
         return d3.time.scale().domain(domain).range([0, width]);
+    },
+
+    updateColorScale: function(data) {
+        var colorDom= [d3.min(data, function (d) { return d._extent[0]; }) + this.colorOffset,
+            d3.max(data, function (d){ return d._extent[1]; }) + this.colorOffset];
+
+        this.colorScale= d3.scale.log().domain(colorDom).range(["white","#CC0000"]);
     },
 
     calcTimeLowerBound: function(time, length, size, span) {
@@ -299,6 +331,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .attr("class", "axis y");
 
         this.durationTime = 500;
+        this.colorOffset= 1;
 
         $super(container);
 
