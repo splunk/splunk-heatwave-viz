@@ -24,13 +24,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             return;
         }
 
-
         var xoff= 100, padding= 50;
-
 
         var HeatMapPlot= this,
             data = this.parseData(jString);
-
 
         var join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
@@ -283,11 +280,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getBucket: function (d) {
-        return [d[0], d[1]];
+        return d[0];
     },
 
     getValue: function (d) {
-        return d[2];
+        return d[1];
+    },
+
+    isNum: function(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
     },
 
     parseData: function(jString) {
@@ -298,13 +299,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             for(var bucket in jString[col]){
                 if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
                     var tmpBucket= this.getBucketFromStr(bucket);
-                    tmp.push([tmpBucket[0], tmpBucket[1], parseFloat(jString[col][bucket])]);
+                    tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
                 }
             }
             tmp._time= new Date(jString[col]._time);
             tmp._span= eval(jString[col]._span);
             tmp._extent= d3.extent(tmp, this.getValue);
-            var firstBucket= tmp[0];
+            var firstBucket= tmp[0][0];
             tmp._bucketSpan= firstBucket[1]-firstBucket[0];
             data.push(tmp);
         }
