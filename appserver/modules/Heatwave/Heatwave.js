@@ -321,7 +321,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     //############################################################
 
     initialize: function($super, container) {
-        this.svg= d3.select("svg"); // d3.select(this.container).select("svg")
+        this.svg= d3.select(container).select("svg");
         this.heatMap= this.svg.append("g")
             .attr("class","heatMap");
 
