@@ -29,7 +29,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var HeatMapPlot= this,
             data = this.parseData(jString);
 
-        var join= this.heatMap.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
+        var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
         if (span === undefined) {
@@ -47,18 +47,17 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         // time span can be shifted in the code below.
         //data.splice(0,1);
 
+        this.updateYScale(data, heatMapHeight);
         this.updateXScale(data, heatMapWidth, heatMapHeight);
+        this.updateColorScale(data);
 
         var newColumns= addColumns(join);
 
         var bucketSpan= data[0]._bucketSpan,
-            currentCols= this.heatMap
+            currentCols= this.heatMapStage
                 .selectAll("g.col")
                 .filter(inRange)
                 .filter(same);
-
-        this.updateYScale(data, heatMapHeight);
-        this.updateColorScale(data);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
@@ -66,7 +65,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         currentCols.each(updateRects)
             .call(move);
 
-        this.heatMap.selectAll("g.cols")
+        this.heatMapStage.selectAll("g.cols")
             .filter(function (d) { return !inRange(d) || !same(d); })
             .transition().duration(this.durationTime)
             .attr("opacity", 0)
@@ -152,29 +151,38 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         function place(selection) {
             selection
                 .attr("y", function(d) {
-                    return HeatMapPlot.yScale(HeatMapPlot.getBucket(d)[1]);
+                    return HeatMapPlot.yScale(HeatMapPlot.getBucket(d));
                 });
         }
 
         //HeatMapPlot.xScale= xScale;
     },
 
+    clearPlot: function() {
+        this.heatMapStage.selectAll("g.col").remove();
+        this.xDom= null;
+
+    },
+
     calculateYDomain: function(data){
-        var that= this;
-        return [d3.min(data, function (colData) { return that.getBucket(colData[0])[0]; }), //selectAll rect?
-            d3.max(data, function (colData) { return that.getBucket(colData[colData.length-1])[1]; })];
+        return data[data.length - 1].map(function (d) {return d[0];});
+        //var that= this;
+        //return [d3.min(data, function (colData) { return that.getBucket(colData[0])[0]; }), //selectAll rect?
+        //    d3.max(data, function (colData) { return that.getBucket(colData[colData.length-1])[1]; })];
     },
 
     calculateYScale: function(domain, height){
-        return d3.scale.linear().domain(domain).range([height, 0]);
+        return d3.scale.ordinal().domain(domain).rangePoints([height, 0]);
+        //return d3.scale.linear().domain(domain).range([height, 0]);
     },
 
     updateYScale: function(data, height){
         var yDom= this.calculateYDomain(data),
-            nBuckets= (yDom[1]-yDom[0])/d3.max(data, function (d) { return d._bucketSpan; });
+            nBuckets= d3.max(data, function (d) { return d.length; }); //(yDom[1]-yDom[0])/d3.max(data, function (d) { return d._bucketSpan; });
 
-        this.yScale= this.calculateYScale(yDom, height);
-        this.bucketHeight= height / nBuckets;
+        this.bucketHeight= height / (nBuckets + 1);
+
+        this.yScale= this.calculateYScale(yDom, height - this.bucketHeight);
 
         var yAxis= d3.svg.axis()
             .scale(this.yScale)
@@ -184,6 +192,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSize(6,3,3);
 
         this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
+            .attr("transform", "translate(0," + (this.bucketHeight / 2) + ")")
             .call(yAxis);
     },
 
@@ -205,7 +214,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSize(6,3,3);
 
         this.heatMap.select("g.axis.x").transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(0," + (height + 1) + ")")
+            .attr("transform", "translate(0," + (height) + ")")
             .call(xAxis);
 
     },
@@ -298,15 +307,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             var tmp= [];
             for(var bucket in jString[col]){
                 if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
-                    var tmpBucket= this.getBucketFromStr(bucket);
+                    var tmpBucket= bucket;//=this.getBucketFromStr(bucket);
                     tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
                 }
             }
             tmp._time= new Date(jString[col]._time);
             tmp._span= eval(jString[col]._span);
             tmp._extent= d3.extent(tmp, this.getValue);
-            var firstBucket= tmp[0][0];
-            tmp._bucketSpan= firstBucket[1]-firstBucket[0];
+            //var firstBucket= tmp[0][0];
+            tmp._bucketSpan= "None";//firstBucket[1]-firstBucket[0];
             data.push(tmp);
         }
         return data;
@@ -316,14 +325,20 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return this.getContext().get("search").getTimeRange();
     },
 
+    getSID: function() {
+        return this.getContext().get("search").job.getSID();
+    },
+
     //############################################################
     // MAIN WAVE RENDERING
     //############################################################
 
     initialize: function($super, container) {
-        this.svg= d3.select("svg"); // d3.select(this.container).select("svg")
+        this.svg= d3.select(container).select("svg");
         this.heatMap= this.svg.append("g")
             .attr("class","heatMap");
+        this.heatMapStage= this.heatMap.append("g")
+            .attr("class","heatMapStage");
 
         this.heatMap.append("g")
             .attr("class", "axis x");
@@ -341,7 +356,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
-
+        this.sid= this.getSID();
     },
 
     parseMetaData: function(metaData){
@@ -445,6 +460,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }else{
             resultsDict = jString.results;
         }
+        var newSID= this.getSID();
+        if ((this.sid) && (this.sid !== newSID)){
+            this.clearPlot();
+        }
+        this.sid= newSID;
 
         var that= this;
         $("document").ready(function() {
