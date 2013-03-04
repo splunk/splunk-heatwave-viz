@@ -397,7 +397,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onJobProgress: function(event) {
-        this.getResults();
+        var context = this.getContext();
+        var search  = context.get("search");
+        if ((search.job.getResultCount() > 0) && (search.job.isPreviewable())) {
+            this.getResults();
+        }
     },
     
     getResultURL: function(params) {
