@@ -370,6 +370,23 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return time[1];
     },
 
+    parsePattern: function(pattern, searchString){
+        var newSearch = searchString.toString().split(pattern);
+        return newSearch[1];
+    },
+
+    parseSearchString: function(searchString){
+        var pattern1 = /^(.+)(?=\|[\s?]`heatwave)/; // [\s?] space is optional between the | and w/e comes after.
+        var pattern2 = /^(.+)(?=\|[\s?]timechart)/;
+        if(searchString.toString().indexOf("`heatwave") !== -1){
+            return this.parsePattern(pattern1, searchString);
+        }
+        if(searchString.toString().indexOf("timechart") !== -1){
+            return this.parsePattern(pattern2, searchString);
+        }
+        return searchString;
+    },
+
     metaTimeToEpoch: function(metaData){
         var newDate = new Date(metaData.toString());
         return newDate.getTime()/1000.0;
@@ -381,14 +398,18 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var context = this.getContext(),
             search = context.get("search");
+
         search.abandonJob();
 
         if(typeof this.epochTimeRange !== "undefined"){
-            var searchRange  = this.epochTimeRange; //new Splunk.TimeRange('1361303400','1361303460');
+            var searchRange  = this.epochTimeRange;
         }else{
             var searchRange = search.getTimeRange();
         }
 
+        var newSearch = this.parseSearchString(search);
+
+        search.setBaseSearch(newSearch);
         search.setTimeRange(searchRange);
         context.set("search", search);
 
