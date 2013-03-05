@@ -177,7 +177,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     calculateYScale: function(domain, height){
-        return d3.scale.ordinal().domain(domain).rangePoints([height, 0]);
+        return d3.scale.ordinal().domain(domain).rangeBands([height, 0]);
         //return d3.scale.linear().domain(domain).range([height, 0]);
     },
 
@@ -185,9 +185,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var yDom= this.calculateYDomain(data),
             nBuckets= d3.max(data, function (d) { return d.length; }); //(yDom[1]-yDom[0])/d3.max(data, function (d) { return d._bucketSpan; });
 
-        this.bucketHeight= height / (nBuckets + 1);
+        this.bucketHeight= height / (nBuckets);
 
-        this.yScale= this.calculateYScale(yDom, height - this.bucketHeight);
+        this.yScale= this.calculateYScale(yDom, height);
 
         var yAxis= d3.svg.axis()
             .scale(this.yScale)
@@ -197,13 +197,43 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSize(6,3,3);
 
         var axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(0," + (this.bucketHeight / 2) + ")")
             .call(yAxis);
 
+        var that= this;
         this.heatMap.select("g.axis.y").selectAll("text")
-            .on("mouseover", function () { d3.select(this).attr("class", "selected"); })
-            .on("mouseout", function () { d3.select(this).attr("class",""); })
+            .on("mouseover", function (d) { that.onYAxisMouseOver(this, that, d); })
+            .on("mouseout", function (d) { that.onYAxisMouseOut(this, that, d); })
             .on("click", function (d) { console.log(d); });
+    },
+
+    onYAxisMouseOver: function (selection, that, d) {
+        d3.select(selection).attr("class", "selected");
+        that.heatMap.append("line")
+            .attr("x1", that.xScale(that.xDom[0]))
+            .attr("x2", that.xScale(that.xDom[1]))
+            .attr("y1", that.yScale(d))
+            .attr("y2", that.yScale(d))
+            .attr("class", "selection");
+
+        that.heatMap.append("line")
+            .attr("x1", that.xScale(that.xDom[0]))
+            .attr("x2", that.xScale(that.xDom[1]))
+            .attr("y1", that.yScale(d) + that.bucketHeight)
+            .attr("y2", that.yScale(d) + that.bucketHeight)
+            .attr("class", "selection");
+    },
+
+    onYAxisMouseOut: function (selection, that, d) {
+        d3.select(selection).attr("class","");
+        that.heatMap.selectAll("line.selection").remove();
+    },
+
+    onXAxisMouseOver: function (selection, that, d) {
+
+    },
+
+    onXAxisMouseOut: function (selection, that, d) {
+
     },
 
     updateXScale: function(data, width, height) {
