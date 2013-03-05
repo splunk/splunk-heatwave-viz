@@ -164,8 +164,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     },
 
+    argmax: function(arr) {
+        var lengths= arr.map(function (d) { return d.length; });
+        return lengths.indexOf(d3.max(lengths))
+    },
+
     calculateYDomain: function(data){
-        return data[data.length - 1].map(function (d) {return d[0];});
+        return data[this.argmax(data)].map(function (d) {return d[0];});
         //var that= this;
         //return [d3.min(data, function (colData) { return that.getBucket(colData[0])[0]; }), //selectAll rect?
         //    d3.max(data, function (colData) { return that.getBucket(colData[colData.length-1])[1]; })];
