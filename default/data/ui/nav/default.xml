@@ -1,3 +1,4 @@
 <nav>
 	<view name="splunk-heatwave-viz" default="true"/>
+	<view name="heatwave-drilldown"/>
 </nav>
