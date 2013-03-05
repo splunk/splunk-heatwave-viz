@@ -196,9 +196,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSubdivide(0)
             .tickSize(6,3,3);
 
-        this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
+        var axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(0," + (this.bucketHeight / 2) + ")")
             .call(yAxis);
+
+        this.heatMap.select("g.axis.y").selectAll("text")
+            .on("mouseover", function () { d3.select(this).attr("class", "selected"); })
+            .on("mouseout", function () { d3.select(this).attr("class",""); })
+            .on("click", function (d) { console.log(d); });
     },
 
     updateXScale: function(data, width, height) {
