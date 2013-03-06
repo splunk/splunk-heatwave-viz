@@ -86,8 +86,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 })
                 .on("click", function(){
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
-                        epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData));
-                    HeatMapPlot.setMetaData(epoch, epoch + span);
+                        epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData)),
+                        field = HeatMapPlot.parseFieldFromMetaData(metaData);
+                    HeatMapPlot.setMetaData(epoch, epoch + span, field);
                 })
                 .call(place)
                 .call(shape)
@@ -391,9 +392,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         $super(container);
 
-        this.yAxisField = "";
+        //this.yAxisField;
         //Time range parameters
-        this.epochTimeRange;
+        //this.epochTimeRange;
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
@@ -401,14 +402,28 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     drillDownOnYAxisField: function(d){
-        this.yAxisField = d;
-        this.setMetaData();
+        //this.yAxisField = d;
+        var context = this.getContext(),
+            search = context.get("search"),
+            timeRange = search.getTimeRange(),
+            earliestTime = timeRange.getAbsoluteEarliestTime(),
+            latestTime = timeRange.getAbsoluteLatestTime();
+        this.setMetaData(earliestTime,latestTime,d);
     },
 
     parseMetaData: function(metaData){
         var pattern = /([^\(]+)/;
         var time = metaData.split(pattern);
         return time[1];
+    },
+
+    parseFieldFromMetaData: function(metaData){
+        var pattern1 = /(\:(?:.(?!\:))+$)/;
+        var pattern2 = /:(.*?),/;
+        var initialMatch = metaData.split(pattern1);
+        var secondaryMatch = initialMatch[1].split(pattern2);
+        var field = secondaryMatch[1].replace(/\W+/g,"");
+        return field;
     },
 
     parseSearchField: function(searchString){
@@ -441,29 +456,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return newDate.getTime()/1000.0;
     },
 
-    setMetaData: function(epochStart, epochEnd){
-        this.epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
-
+    setMetaData: function(epochStart, epochEnd, field){
         var context = this.getContext(),
             search = context.get("search"),
             newSearch = this.parseSearchString(search),
-            groupByField = this.parseSearchField(search);
-
+            groupByField = this.parseSearchField(search),
+            epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
         search.abandonJob();
 
-        //Get the right time range.
-        if(typeof this.epochTimeRange !== "undefined"){
-            var searchRange  = this.epochTimeRange;
-        }else{
-            var searchRange = search.getTimeRange();
-        }
-
-        //Get right search ending.
-        var drilldownSearch = newSearch.concat("| search "+groupByField+"=\""+this.yAxisField+"\"");
+        var searchRange  = epochTimeRange;
+        var drilldownSearch = newSearch.concat("| search "+groupByField+"=\""+field+"\"");
 
         search.setBaseSearch(drilldownSearch);
         search.setTimeRange(searchRange);
-        console.log(search);
         context.set("search", search);
 
         if(this.doneUpstream && !(this.gettingResults)){

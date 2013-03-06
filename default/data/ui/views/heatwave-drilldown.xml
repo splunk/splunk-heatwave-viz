@@ -64,10 +64,10 @@
 
                             <module name="Heatwave" layoutPanel="panel_row2_col1">
                                 <module name="Paginator" layoutPanel="panel_row3_col1">
-                                    <param name="entityName">results</param>
+                                    <param name="entityName">events</param>
 
                                     <module name="SimpleResultsTable" layoutPanel="panel_row3_col1">
-                                        <param name="entityName">results</param>
+                                        <param name="entityName">events</param>
                                     </module>
 
                                 </module>
