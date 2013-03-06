@@ -426,7 +426,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     drillDownOnYAxisField: function(d){
-        //this.yAxisField = d;
         var context = this.getContext(),
             search = context.get("search"),
             timeRange = search.getTimeRange(),
