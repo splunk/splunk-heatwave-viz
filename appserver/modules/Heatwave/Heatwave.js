@@ -87,6 +87,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join.enter().insert("rect")
                 .on("mouseover", function(d){
                     d3.select(this).style("fill", "lightblue").classed("selected", true);
+                    d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",true);
                     //HeatMapPlot.onYAxisMouseOver(null, HeatMapPlot, HeatMapPlot.getBucket(d));
                 })
                 .on("click", function(){
@@ -103,6 +104,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
             join.on("mouseout", function(d){
                 d3.select(this).style("fill", toColor(d)).classed("selected", false);
+                d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",false);
                 //HeatMapPlot.onYAxisMouseOut(null, HeatMapPlot, HeatMapPlot.getBucket(d));
             });
 
