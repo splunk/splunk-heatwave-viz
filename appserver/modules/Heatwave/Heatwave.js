@@ -73,6 +73,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         function addColumns(d3set) {
             return d3set.enter().insert("g","g.axis").attr("class", "col")
+                /*.on("mouseover", function (d) {
+                    HeatMapPlot.onXAxisMouseOver(this, HeatMapPlot, d); })
+                .on("mouseout", function (d) {
+                    HeatMapPlot.onXAxisMouseOut(this, HeatMapPlot, d);})*/
                 .call(moveIn);
         }
 
@@ -81,8 +85,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 join= rect.data(colData, HeatMapPlot.getBucket);
 
             join.enter().insert("rect")
-                .on("mouseover", function(){
-                    d3.select(this).style("fill", "lightblue")
+                .on("mouseover", function(d){
+                    d3.select(this).style("fill", "lightblue").classed("selected", true);
+                    //HeatMapPlot.onYAxisMouseOver(null, HeatMapPlot, HeatMapPlot.getBucket(d));
                 })
                 .on("click", function(){
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
@@ -97,7 +102,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .call(title, colData);
 
             join.on("mouseout", function(d){
-                d3.select(this).style("fill", toColor(d))
+                d3.select(this).style("fill", toColor(d)).classed("selected", false);
+                //HeatMapPlot.onYAxisMouseOut(null, HeatMapPlot, HeatMapPlot.getBucket(d));
             });
 
             join.transition().duration(this.durationTime).ease("linear")
@@ -209,19 +215,18 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     onYAxisMouseOver: function (selection, that, d) {
         d3.select(selection).attr("class", "selected");
-        that.heatMap.append("line")
-            .attr("x1", that.xScale(that.xDom[0]))
-            .attr("x2", that.xScale(that.xDom[1]))
-            .attr("y1", that.yScale(d))
-            .attr("y2", that.yScale(d))
-            .attr("class", "selection");
 
-        that.heatMap.append("line")
-            .attr("x1", that.xScale(that.xDom[0]))
-            .attr("x2", that.xScale(that.xDom[1]))
-            .attr("y1", that.yScale(d) + that.bucketHeight)
-            .attr("y2", that.yScale(d) + that.bucketHeight)
-            .attr("class", "selection");
+        that.appendSelectionLine(that,
+            that.xScale(that.xDom[0]),
+            that.xScale(that.xDom[1]),
+            that.yScale(d),
+            that.yScale(d));
+
+        that.appendSelectionLine(that,
+            that.xScale(that.xDom[0]),
+            that.xScale(that.xDom[1]),
+            that.yScale(d) + that.bucketHeight,
+            that.yScale(d) + that.bucketHeight);
     },
 
     onYAxisMouseOut: function (selection, that, d) {
@@ -230,11 +235,33 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onXAxisMouseOver: function (selection, that, d) {
+        d3.select(selection).classed("selected", true);
 
+        that.appendSelectionLine(that,
+            that.xScale(d._time),
+            that.xScale(d._time),
+            0,
+            that.yScale(""));
+
+        that.appendSelectionLine(that,
+            that.xScale(d._time) + that.bucketWidth,
+            that.xScale(d._time) + that.bucketWidth,
+            0,
+            that.yScale(""));
     },
 
     onXAxisMouseOut: function (selection, that, d) {
+        d3.select(selection).classed("selected",false);
+        that.heatMap.selectAll("line.selection").remove();
+    },
 
+    appendSelectionLine: function(that, x1,x2,y1,y2) {
+        that.heatMap.append("line")
+            .attr("x1", x1)
+            .attr("x2", x2)
+            .attr("y1", y1)
+            .attr("y2", y2)
+            .attr("class", "selection");
     },
 
     updateXScale: function(data, width, height) {
