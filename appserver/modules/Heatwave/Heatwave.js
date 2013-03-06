@@ -429,8 +429,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var context = this.getContext(),
             search = context.get("search"),
             timeRange = search.getTimeRange(),
-            earliestTime = timeRange.getAbsoluteEarliestTime(),
-            latestTime = timeRange.getAbsoluteLatestTime();
+            earliestTime = timeRange.getRelativeEarliestTime(),
+            latestTime = timeRange.getRelativeLatestTime();
         this.setMetaData(earliestTime,latestTime,d);
     },
 
