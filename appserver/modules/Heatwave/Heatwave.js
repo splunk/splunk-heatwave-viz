@@ -419,9 +419,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         $super(container);
 
-        //this.yAxisField;
-        //Time range parameters
-        //this.epochTimeRange;
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
