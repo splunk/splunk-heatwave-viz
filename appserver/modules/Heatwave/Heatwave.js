@@ -87,12 +87,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join.enter().insert("rect")
                 .on("mouseover", function(d){
                     d3.select(this).style("fill", "lightblue").classed("selected", true);
+                    d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",true);
                     //HeatMapPlot.onYAxisMouseOver(null, HeatMapPlot, HeatMapPlot.getBucket(d));
                 })
                 .on("click", function(){
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
                         epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData)),
-                        field = HeatMapPlot.parseFieldFromMetaData(metaData);
+                        field = HeatMapPlot.parseFieldFromMetaData(metaData),
+                        colorDom= HeatMapPlot.colorScale.domain(),
+                        step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
                     HeatMapPlot.setMetaData(epoch, epoch + span, field);
                 })
                 .call(place)
@@ -103,6 +106,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
             join.on("mouseout", function(d){
                 d3.select(this).style("fill", toColor(d)).classed("selected", false);
+                d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",false);
                 //HeatMapPlot.onYAxisMouseOut(null, HeatMapPlot, HeatMapPlot.getBucket(d));
             });
 
@@ -416,6 +420,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.durationTime = 500;
         this.colorOffset= 1;
+        this.nDrilldownBuckets= 30;
 
         $super(container);
 
@@ -480,7 +485,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return newDate.getTime()/1000.0;
     },
 
-    setMetaData: function(epochStart, epochEnd, field){
+    setMetaData: function(epochStart, epochEnd, field, span){
         var context = this.getContext(),
             search = context.get("search"),
             newSearch = this.parseSearchString(search),
