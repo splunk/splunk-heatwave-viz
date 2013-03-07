@@ -419,6 +419,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         $super(container);
 
+        this.requiredFields = [];
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
@@ -490,6 +491,12 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var searchRange  = epochTimeRange;
         var drilldownSearch = newSearch.concat("| search "+groupByField+"=\""+field+"\"");
 
+        //Keep this!
+        this.requiredFields = [epochStart,epochEnd,field];
+        console.log(this.requiredFields);
+        search.setRequiredFields(this.requiredFields);
+        //
+
         search.setBaseSearch(drilldownSearch);
         search.setTimeRange(searchRange);
         context.set("search", search);
@@ -528,7 +535,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     onBeforeJobDispatched: function(search) {
         search.setMinimumStatusBuckets(1);
-        search.setRequiredFields(["*"]);
+        search.setRequiredFields(this.requiredFields);
     },
 
     getResultParams: function($super) {
