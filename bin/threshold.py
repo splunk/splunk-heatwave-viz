@@ -30,10 +30,14 @@ class Thresholdify():
         self.maxBuckets = self.maxBucketsToMerge()
 
         self.threshold = self.roundThreshold(threshold, self.getBucketsNotToMerge())
+        self.discard_min = False
+        self.discard_max = False
 
     def roundThreshold(self, threshold, buckets):
-        minThreshold = int(buckets[0].split("-")[0]) if (threshold.min > int(buckets[0].split("-")[0])) else threshold.min
-        maxThreshold = int(buckets[-1].split("-")[1]) if (threshold.max < int(buckets[-1].split("-")[1])) else threshold.max
+        minThreshold = int(buckets[0].split("-")[0]) if (
+            threshold.min > int(buckets[0].split("-")[0])) else threshold.min
+        maxThreshold = int(buckets[-1].split("-")[1]) if (
+            threshold.max < int(buckets[-1].split("-")[1])) else threshold.max
 
         return Threshold(minThreshold, maxThreshold)
 
@@ -46,6 +50,11 @@ class Thresholdify():
 
         return result
 
+    def setDiscardMin(self, value):
+        self.discard_min = value
+
+    def setDiscardMax(self, value):
+        self.discard_max = value
 
     def maxBucketsToMerge(self):
         result = 0
@@ -64,23 +73,19 @@ class Thresholdify():
 
         result = []
 
-        for before in self.splunkHeader.getFieldsBefore():
-            result.append(before)
+        result.extend(self.splunkHeader.getFieldsBefore())
 
-        result.append("-inf - " + str(self.threshold.min))
+        if not self.discard_min:
+            result.append("<" + str(self.threshold.min))
 
-        bucketsNotToMerge = self.getBucketsNotToMerge()
+        result.extend(self.getBucketsNotToMerge())
 
-        for bucket in bucketsNotToMerge:
-            result.append(bucket)
+        if not self.discard_max:
+            result.append(">" + str(self.threshold.max))
 
-        result.append(str(self.threshold.max) + " - inf")
-
-        for after in self.splunkHeader.getFieldsAfter():
-            result.append(after)
+        result.extend(self.splunkHeader.getFieldsAfter())
 
         return result
-
 
     def mergeBuckets(self, bucketsToMerge):
         result = 0
@@ -93,32 +98,36 @@ class Thresholdify():
         minMerge = self.mergeBuckets(bucketFields[0:self.minBuckets])
         maxMerge = self.mergeBuckets(bucketFields[(len(bucketFields) - self.maxBuckets):])
 
-        result.append(minMerge)
-        for bucket in bucketFields[self.minBuckets:(len(bucketFields) - self.maxBuckets)]:
-            result.append(bucket)
+        if not self.discard_min:
+            result.append(minMerge)
 
-        result.append(maxMerge)
+        for bucket in bucketFields[self.minBuckets:(len(bucketFields) - self.maxBuckets)]:
+            result.append(int(bucket))
+
+        if not self.discard_max:
+            result.append(maxMerge)
 
         return result
 
+    def getBeforeFieldsFromLine(self, line):
+        return line[0:len(self.splunkHeader.getFieldsBefore())]
+
+    def getBucketFieldsFromLine(self, line):
+        return line[len(self.splunkHeader.getFieldsBefore()):(len(line) - len(self.splunkHeader.getFieldsAfter()))]
+
+    def getAfterFieldsFromLine(self, line):
+        return line[(len(line) - len(self.splunkHeader.getFieldsAfter())):]
+
+
     def parseDataLine(self, line):
+
         result = []
 
-        fieldsBefore = line[0:len(self.splunkHeader.getFieldsBefore())]
-        bucketFields = line[
-                       len(self.splunkHeader.getFieldsBefore()):(len(line) - len(self.splunkHeader.getFieldsAfter()))]
-        fieldsAfter = line[(len(line) - len(self.splunkHeader.getFieldsAfter())):]
+        result.extend(self.getBeforeFieldsFromLine(line))
 
-        mergedFields = self.getMergedFields(bucketFields)
+        result.extend(self.getMergedFields(self.getBucketFieldsFromLine(line)))
 
-        for before in fieldsBefore:
-            result.append(before)
-
-        for bucket in mergedFields:
-            result.append(int(bucket))
-
-        for after in fieldsAfter:
-            result.append(after)
+        result.extend(self.getAfterFieldsFromLine(line))
 
         return result
 
@@ -138,6 +147,8 @@ def main():
 
     threshold_min = int(argvals.get("min", 100000))
     threshold_max = int(argvals.get("max", 220000))
+    discard_min = bool(argvals.get("discard_min", False))
+    discard_max = bool(argvals.get("discard_max", False))
 
     csv_reader = csv.reader(sys.stdin)
 
@@ -153,6 +164,8 @@ def main():
             threshold = Threshold(threshold_min, threshold_max)
 
             thresholdify = Thresholdify(parser, threshold)
+            thresholdify.setDiscardMin(discard_min)
+            thresholdify.setDiscardMax(discard_max)
 
             headers = thresholdify.createHeaderWithThreshold()
             output.append(headers)
@@ -175,3 +188,83 @@ try:
     main()
 except:
     pass
+
+
+
+
+############ UNIT TESTS ###############
+import unittest
+
+
+class TestSplunkHeaderParser(unittest.TestCase):
+    header = ["_time", "0-1", "1-2", "2-3", "3-4", "_span"]
+
+    parser = SplunkBucketHeaderParser(header)
+
+    def test_getFieldsBefore_returnsTimeField(self):
+        self.assertEqual(self.parser.getFieldsBefore(), ["_time"])
+
+    def test_getFieldsAfter_returnSpanField(self):
+        self.assertEqual(self.parser.getFieldsAfter(), ["_span"])
+
+    def test_getBucketFields_returnBucketFields(self):
+        self.assertEqual(self.parser.getBucketFields(), ["0-1", "1-2", "2-3", "3-4"])
+
+
+class TestThresholdifyFunctions(unittest.TestCase):
+    header = ["_time", "0-1", "1-2", "2-3", "3-4", "_span"]
+    data = [["00:00:00", "5", "2", "3", "2", "100"],
+            ["00:00:01", "1", "3", "3", "2", "100"],
+            ["00:00:02", "0", "3", "1", "0", "100"]]
+
+    thresholdifier = Thresholdify(SplunkBucketHeaderParser(header), Threshold(2, 3))
+
+
+    def test_minBucketsToMerge_returnsNumberOfBucketsThatHaveToBeMerged(self):
+        self.assertEqual(self.thresholdifier.minBucketsToMerge(), 2)
+
+    def test_maxBucketsToMerge_returnsNumberOfBucketsThatHaveToBeMerged(self):
+        self.assertEqual(self.thresholdifier.maxBucketsToMerge(), 1)
+
+    def test_createNewHeader_returnsHeaderWithThresholdBuckets(self):
+        newHeader = self.thresholdifier.createHeaderWithThreshold()
+        self.assertEqual(newHeader, ["_time", "<2", "2-3", ">3", "_span"])
+
+    def test_createNewHeaderWithMinDiscard_returnsHeaderWithThresholdBuckets(self):
+        thresholdifierWithDiscardMin = Thresholdify(SplunkBucketHeaderParser(self.header), Threshold(2, 3))
+        thresholdifierWithDiscardMin.setDiscardMin(True)
+
+        self.assertEqual(thresholdifierWithDiscardMin.createHeaderWithThreshold(), ["_time", "2-3", ">3", "_span"])
+
+    def test_createNewHeaderWithMaxDiscard_returnsHeaderWithThresholdBuckets(self):
+        thresholdifierWithDiscardMax = Thresholdify(SplunkBucketHeaderParser(self.header), Threshold(2, 3))
+        thresholdifierWithDiscardMax.setDiscardMax(True)
+
+        self.assertEqual(thresholdifierWithDiscardMax.createHeaderWithThreshold(), ["_time", "<2", "2-3", "_span"])
+
+    def test_createBucketValues_returnsCorrectBucketLine(self):
+        bucketLine = self.thresholdifier.parseDataLine(self.data[0])
+
+        self.assertEqual(bucketLine, ['00:00:00', 7, 3, 2, '100'])
+
+    def test_createBucketValuesWithNonEvenSpan_returnsRoundedMinMax(self):
+        header = ["_time", "0-10", "10-20", "20-30", "30-40", "_span"]
+        thresholdifier = Thresholdify(SplunkBucketHeaderParser(header), Threshold(13, 28))
+
+        self.assertEqual(thresholdifier.createHeaderWithThreshold(), ["_time", "<10", "10-20", "20-30", ">30", "_span"])
+
+    def test_createBucketValuesWithDiscardMin_returnsWithoutMinThreshold(self):
+        thresholdifierWithDiscardMin = Thresholdify(SplunkBucketHeaderParser(self.header), Threshold(2, 3))
+        thresholdifierWithDiscardMin.setDiscardMin(True)
+
+        bucketLine = thresholdifierWithDiscardMin.parseDataLine(self.data[0])
+
+        self.assertEqual(bucketLine, ['00:00:00', 3, 2, '100'])
+
+    def test_createBucketValuesWithDiscardMax_returnsWithoutMaxThreshold(self):
+        thresholdifierWithDiscardMax = Thresholdify(SplunkBucketHeaderParser(self.header), Threshold(2, 3))
+        thresholdifierWithDiscardMax.setDiscardMax(True)
+
+        bucketLine = thresholdifierWithDiscardMax.parseDataLine(self.data[0])
+
+        self.assertEqual(bucketLine, ['00:00:00', 7, 3, '100'])
