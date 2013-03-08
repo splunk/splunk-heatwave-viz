@@ -29,6 +29,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var HeatMapPlot= this,
             data = this.parseData(jString);
 
+        if (this.getTimeRange()._constructorArgs[1] === "rt"){
+            data.shift(); //Remove earliest column due to visual feature of "disappearing" buckets in realtime searches
+        }
+
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
@@ -65,7 +69,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         currentCols.each(updateRects)
             .call(move);
 
-        this.heatMapStage.selectAll("g.cols")
+        this.heatMapStage.selectAll("g.col")
             .filter(function (d) { return !inRange(d) || !same(d); })
             .transition().duration(this.durationTime)
             .attr("opacity", 0)
@@ -301,14 +305,17 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     updateXDom: function(data){
-        var newXDom= d3.extent(data, this.getTime);
+        var newXDom= d3.extent(data, this.getTime),
+            span= data[0]._span * 1000;
+
+        newXDom[1]= this.addTime(newXDom[1], span); //Changes time axis to deal with time spans not time points.
 
         if (!this.xDom)
         {
             this.xDom= newXDom;
 
             // Shift the xDomain 1 column to the right.
-            this.shiftXDomain(data[0]._span * 1000);
+            //this.shiftXDomain(span);
         }
         else
         {
@@ -316,6 +323,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             if (newXDom[0] < this.xDom[0]){
                 this.xDom[0]= newXDom[0];
             }
+
+            //console.log("old time:",this.xDom)
+            //console.log("new time:",newXDom)
 
             // Sift if realtime data appears
             if (newXDom[1] > this.xDom[1]){
