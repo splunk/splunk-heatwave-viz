@@ -63,16 +63,18 @@
 
 
                             <module name="Heatwave" layoutPanel="panel_row2_col1">
-                                <module name="HeatwaveSelfDrilldown"></module>
-                                <module name="Paginator" layoutPanel="panel_row3_col1">
-                                    <param name="entityName">events</param>
-
-                                    <module name="SimpleResultsTable" layoutPanel="panel_row3_col1">
+                                <module name="HeatwaveDrilldown">
+                                    <module name="Heatwave" layoutPanel="panel_row3_col1"></module>
+                                    <param name="search">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | search COMMAND=thisFieldWillBeSpecifiedByClick | timechart count by pctCPU limit=0 span=thisSpanWillBeSpecifiedOnDrilldown</param>
+                                    <module name="Paginator" layoutPanel="panel_row4_col1">
                                         <param name="entityName">events</param>
+
+                                        <module name="SimpleResultsTable" layoutPanel="panel_row4_col1">
+                                            <param name="entityName">events</param>
+                                        </module>
+
                                     </module>
-
                                 </module>
-
                             </module>
                         </module>
                     </module>

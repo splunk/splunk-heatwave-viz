@@ -96,7 +96,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                         field = HeatMapPlot.parseFieldFromMetaData(metaData),
                         colorDom= HeatMapPlot.colorScale.domain(),
                         step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
-                    HeatMapPlot.setMetaData(epoch, epoch + span, field);
+                    HeatMapPlot.setMetaData(epoch, epoch + span, field, step);
                 })
                 .call(place)
                 .call(shape)
@@ -436,8 +436,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             search = context.get("search"),
             timeRange = search.getTimeRange(),
             earliestTime = timeRange.getRelativeEarliestTime(),
-            latestTime = timeRange.getRelativeLatestTime();
-        this.setMetaData(earliestTime,latestTime,d);
+            latestTime = timeRange.getRelativeLatestTime(),
+            colorDom= this.colorScale.domain(),
+            step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
+        this.setMetaData(earliestTime,latestTime,d,step);
     },
 
     parseMetaData: function(metaData){
@@ -487,23 +489,24 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     setMetaData: function(epochStart, epochEnd, field, span){
         var context = this.getContext(),
-            search = context.get("search"),
-            newSearch = this.parseSearchString(search),
+            search = context.get("search");
+        /*    newSearch = this.parseSearchString(search),
             groupByField = this.parseSearchField(search),
             epochTimeRange = new Splunk.TimeRange(epochStart, epochEnd);
         search.abandonJob();
 
         var searchRange  = epochTimeRange;
         var drilldownSearch = newSearch.concat("| search "+groupByField+"=\""+field+"\"");
+        */
 
         //Keep this!
-        this.requiredFields = [epochStart,epochEnd,field];
+        this.requiredFields = [epochStart,epochEnd,field,span];
         console.log(this.requiredFields);
         search.setRequiredFields(this.requiredFields);
         //
 
-        search.setBaseSearch(drilldownSearch);
-        search.setTimeRange(searchRange);
+        /*search.setBaseSearch(drilldownSearch);
+        search.setTimeRange(searchRange);*/
         context.set("search", search);
 
         if(this.doneUpstream && !(this.gettingResults)){
