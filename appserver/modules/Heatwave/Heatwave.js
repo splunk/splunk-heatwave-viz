@@ -60,8 +60,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var bucketSpan= data[0]._bucketSpan,
             currentCols= this.heatMapStage
                 .selectAll("g.col")
-                .filter(inRange)
-                .filter(same);
+                .filter(inRange);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
@@ -71,8 +70,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         currentCols.each(updateRects)
             .call(move);
 
-        this.heatMapStage.selectAll("g.col")
-            .filter(function (d) { return !inRange(d) || !same(d); })
+        join.exit()
+            .filter(function (d) { return !inRange(d); })
             .transition().duration(this.durationTime)
             .attr("opacity", 0)
             .remove();
@@ -139,10 +138,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             return d._time >= HeatMapPlot.xDom[0] && d._time <= HeatMapPlot.xDom[1];
         }
 
-        function same(d) {
-            return d._span === span && d._bucketSpan === bucketSpan;
-        }
-
         function move(selection) {
             selection
                 .transition().duration(HeatMapPlot.durationTime).ease("linear")
@@ -153,7 +148,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         function moveIn(selection) {
             selection
                 .attr("opacity", 0)
-                .attr("transform", function (d) { return "translate(" + HeatMapPlot.xScale(d._time) + ",0)"; });
+                .attr("transform", function (d) {
+                    return "translate(" + (HeatMapPlot.xScale(d._time) + HeatMapPlot.bucketWidth) + ",0)";
+                });
         }
 
         function shape(selection) {
