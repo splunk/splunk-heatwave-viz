@@ -360,7 +360,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     updateThresholdLines : function(){
         var lowerThresholdLine= this.heatMap.selectAll("line.threshold.lower").data(this.lowerThreshold, function (d) {return d;}),
-            upperThresholdLine= this.heatMap.selectAll("line.threshold.upper").data(this.upperThreshold, function (d) {return d;});
+            upperThresholdLine= this.heatMap.selectAll("line.threshold.upper").data(this.upperThreshold, function (d) {return d;}),
+            HeatMapPlot= this;
 
         function placeOver(d) { return HeatMapPlot.yScale(d); }
 
