@@ -66,6 +66,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
+        this.updateThresholdLines();
+
         currentCols.each(updateRects)
             .call(move);
 
@@ -224,17 +226,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     onYAxisMouseOver: function (selection, that, d) {
         d3.select(selection).attr("class", "selected");
 
-        that.appendSelectionLine(that,
+        that.appendLine(that,
             that.xScale(that.xDom[0]),
             that.xScale(that.xDom[1]),
             that.yScale(d),
-            that.yScale(d));
+            that.yScale(d))
+            .attr("class", "selection");
 
-        that.appendSelectionLine(that,
+        that.appendLine(that,
             that.xScale(that.xDom[0]),
             that.xScale(that.xDom[1]),
             that.yScale(d) + that.bucketHeight,
-            that.yScale(d) + that.bucketHeight);
+            that.yScale(d) + that.bucketHeight)
+            .attr("class", "selection");
     },
 
     onYAxisMouseOut: function (selection, that, d) {
@@ -245,17 +249,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     onXAxisMouseOver: function (selection, that, d) {
         d3.select(selection).classed("selected", true);
 
-        that.appendSelectionLine(that,
+        that.appendLine(that,
             that.xScale(d._time),
             that.xScale(d._time),
             0,
-            that.yScale(""));
+            that.yScale(""))
+            .attr("class", "selection");
 
-        that.appendSelectionLine(that,
+        that.appendLine(that,
             that.xScale(d._time) + that.bucketWidth,
             that.xScale(d._time) + that.bucketWidth,
             0,
-            that.yScale(""));
+            that.yScale(""))
+            .attr("class", "selection");
     },
 
     onXAxisMouseOut: function (selection, that, d) {
@@ -263,13 +269,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         that.heatMap.selectAll("line.selection").remove();
     },
 
-    appendSelectionLine: function(that, x1,x2,y1,y2) {
-        that.heatMap.append("line")
+    appendLine: function(that, x1,x2,y1,y2) {
+        return that.heatMap.insert("line","line.threshold")
             .attr("x1", x1)
             .attr("x2", x2)
             .attr("y1", y1)
-            .attr("y2", y2)
-            .attr("class", "selection");
+            .attr("y2", y2);
+    },
+
+    horizontal: function(selection, that, y) {
+        selection.attr("x1", that.xScale(that.xDom[0]))
+            .attr("x2", that.xScale(that.xDom[1]))
+            .attr("y1", y)
+            .attr("y2", y);
     },
 
     updateXScale: function(data, width, height) {
@@ -346,6 +358,35 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.colorScale= d3.scale.log().domain(colorDom).range(["white","#CC0000"]);
     },
 
+    updateThresholdLines : function(){
+        var lowerThresholdLine= this.heatMap.selectAll("line.threshold.lower").data(this.lowerThreshold, function (d) {return d;}),
+            upperThresholdLine= this.heatMap.selectAll("line.threshold.upper").data(this.upperThreshold, function (d) {return d;});
+
+        function placeOver(d) { return HeatMapPlot.yScale(d); }
+
+        lowerThresholdLine.enter().append("line")
+            .call(this.horizontal, this, placeOver)
+            .classed("threshold lower", true);
+
+        lowerThresholdLine.transition().duration(HeatMapPlot.durationTime)
+            .attr({"y1": placeOver,
+                "y2": placeOver});
+
+        lowerThresholdLine.exit().remove();
+
+        function placeUnder(d) { return HeatMapPlot.yScale(d) + HeatMapPlot.bucketHeight;}
+
+        upperThresholdLine.enter().append("line")
+            .call(this.horizontal, this, placeUnder)
+            .classed("threshold upper", true);
+
+        upperThresholdLine.transition().duration(HeatMapPlot.durationTime)
+            .attr({"y1": placeUnder,
+                "y2": placeUnder});
+
+        upperThresholdLine.exit().remove();
+    },
+
     calcTimeLowerBound: function(time, length, size, span) {
         time = time.getTime();
         var date = time - (length / size) * span * 1000;
@@ -383,12 +424,20 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     parseData: function(jString) {
+        this.lowerThreshold= [];
+        this.upperThreshold= [];
         var data= [];
         //sort data according to bucket values
         for(var col=0; col<jString.length; col++){
             var tmp= [];
             for(var bucket in jString[col]){
                 if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
+                    if (bucket[0] === "<"){
+                        this.lowerThreshold.push(bucket);
+                    }
+                    else if (bucket[0] === ">"){
+                        this.upperThreshold.push(bucket);
+                    }
                     var tmpBucket= bucket;//=this.getBucketFromStr(bucket);
                     tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
                 }
