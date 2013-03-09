@@ -92,7 +92,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join.enter().insert("rect")
                 .on("mouseover", function(d){
                     d3.select(this).style("fill", "lightblue").classed("selected", true);
-                    d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",true);
+                    HeatMapPlot.heatMap.select("g.axis.y").selectAll("text").data(d, String).classed("selected",true);
                     //HeatMapPlot.onYAxisMouseOver(null, HeatMapPlot, HeatMapPlot.getBucket(d));
                 })
                 .on("click", function(){
@@ -101,7 +101,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                         field = HeatMapPlot.parseFieldFromMetaData(metaData),
                         colorDom= HeatMapPlot.colorScale.domain(),
                         step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
-                    HeatMapPlot.setMetaData(epoch, epoch + span, field, step.toFixed(2));
+                        HeatMapPlot.setMetaData(epoch, epoch + span, field, step.toFixed(2));
                 })
                 .call(place)
                 .call(shape)
@@ -111,7 +111,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
             join.on("mouseout", function(d){
                 d3.select(this).style("fill", toColor(d)).classed("selected", false);
-                d3.select("g.axis.y").selectAll("text").data(d, String).classed("selected",false);
+                HeatMapPlot.heatMap.select("g.axis.y").selectAll("text").data(d, String).classed("selected",false);
                 //HeatMapPlot.onYAxisMouseOut(null, HeatMapPlot, HeatMapPlot.getBucket(d));
             });
 
@@ -496,7 +496,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             latestTime = timeRange.getRelativeLatestTime(),
             colorDom= this.colorScale.domain(),
             step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
-        this.setMetaData(earliestTime,latestTime,d,step);
+        this.setMetaData(earliestTime, latestTime, d, step.toFixed(2));
     },
 
     parseMetaData: function(metaData){
