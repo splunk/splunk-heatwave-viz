@@ -101,7 +101,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                         field = HeatMapPlot.parseFieldFromMetaData(metaData),
                         colorDom= HeatMapPlot.colorScale.domain(),
                         step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
-                    HeatMapPlot.setMetaData(epoch, epoch + span, field, step);
+                    HeatMapPlot.setMetaData(epoch, epoch + span, field, step.toFixed(2));
                 })
                 .call(place)
                 .call(shape)
