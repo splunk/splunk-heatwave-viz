@@ -17,7 +17,7 @@
 -->
 
 <view template="dashboard.html" stylesheet="dashboard_size.css">
-    <label>Search</label>
+    <label>Splunkgit</label>
     <module name="AccountBar" layoutPanel="appHeader"/>
     <module name="AppBar" layoutPanel="navigationHeader"/>
     <module name="Message" layoutPanel="messaging">
@@ -35,6 +35,7 @@
         <param name="useAssistant">true</param>
         <param name="useTypeahead">true</param>
         <param name="useOwnSubmitButton">False</param>
+        <param name="default">index=splunkgit source="git_repo" repository=* | dedup commit_hash | search author_name=* | timechart bins=30 count(commit_hash) by repository limit=0 span=1</param>
         <module name="TimeRangePicker">
             <param name="selected">All time</param>
             <param name="searchWhenChanged">False</param>
@@ -53,13 +54,27 @@
                     <module name="EnablePreview">
                         <param name="enable">true</param>
                         <param name="display">false</param>
-                        <module name="Heatwave" layoutPanel="panel_row1_col1">
-                            <module name="Paginator" layoutPanel="panel_row3_col1">
-                                <param name="entityName">results</param>
-                                <module name="SimpleResultsTable">
-                                    <param name="entityName">results</param>
-                                </module>
+                        <module name="FlashTimeline" layoutPanel="panel_row1_col1">
+                            <param name="height">250px</param>
+                            <param name="width">95%</param>
+                            <param name="enableResize">False</param>
 
+
+                            <!-- Custom Module for Context change here -->
+
+                            <module name="Heatwave" layoutPanel="panel_row2_col1">
+                                <module name="HeatwaveDrilldown">
+                                    <param name="search">index=splunkgit source="git_repo" repository=thisFieldWillBeSpecifiedByClick | dedup commit_hash | search author_name=* | timechart bins=30 count(commit_hash) by author_name limit=0 span=1</param>
+                                    <module name="Heatwave" layoutPanel="panel_row3_col1"></module>
+                                    <module name="Paginator" layoutPanel="panel_row4_col1">
+                                        <param name="entityName">events</param>
+
+                                        <module name="SimpleResultsTable" layoutPanel="panel_row4_col1">
+                                            <param name="entityName">events</param>
+                                        </module>
+
+                                    </module>
+                                </module>
                             </module>
                         </module>
                     </module>

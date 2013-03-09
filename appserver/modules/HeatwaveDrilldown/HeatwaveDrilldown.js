@@ -22,7 +22,7 @@ Splunk.Module.HeatwaveDrilldown = $.klass(Splunk.Module, {
     },
 
     modifySearch: function(searchString, field, span){
-        searchString = searchString.replace("thisFieldWillBeSpecifiedByClick", field);
+        searchString = searchString.replace("thisFieldWillBeSpecifiedByClick", "\""+field+"\"");
         searchString = searchString.replace("thisSpanWillBeSpecifiedOnDrilldown", span);
 
         console.log("This is the modifiedSearch: "+searchString);
