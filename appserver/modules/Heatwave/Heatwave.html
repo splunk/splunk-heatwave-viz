@@ -16,6 +16,12 @@
         stroke-width: 2px;
     }
 
+    .threshold {
+        fill: none;
+        stroke: black;
+        stroke-width: 2px;
+        stroke-dasharray: 9, 5;
+    }
     .selected {
         font-weight: bold;
     }
@@ -27,7 +33,7 @@
 </style>
 <div class="Heatwave">
 
-<%lib:script_tags files="${['/static/app/splunk-heatwave-viz/d3.v2.js/d3.v2.js']}" />
+<%lib:script_tags files="${['/static/app/splunk-heatwave-viz/d3.v3.js/d3.v3.js']}" />
 
 
 <%page args="module" expression_filter="h" />
