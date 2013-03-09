@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!--
+   Copyright 2013 Splunk Inc
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<view template="dashboard.html" stylesheet="dashboard_size.css">
+    <label>Splunkgit</label>
+    <module name="AccountBar" layoutPanel="appHeader"/>
+    <module name="AppBar" layoutPanel="navigationHeader"/>
+    <module name="Message" layoutPanel="messaging">
+        <param name="filter">*</param>
+        <param name="clearOnJobDispatch">False</param>
+        <param name="maxSize">1</param>
+    </module>
+
+    <module name="TitleBar" layoutPanel="viewHeader">
+        <param name="actionsMenuFilter">dashboard</param>
+    </module>
+
+    <!-- Renders the search box -->
+    <module name="SearchBar" layoutPanel="splSearchControls-inline">
+        <param name="useAssistant">true</param>
+        <param name="useTypeahead">true</param>
+        <param name="useOwnSubmitButton">False</param>
+        <param name="default">index=splunkgit source="git_repo" repository=* | dedup commit_hash | search author_name=* | timechart bins=30 count(commit_hash) by repository limit=0 span=1</param>
+        <module name="TimeRangePicker">
+            <param name="selected">All time</param>
+            <param name="searchWhenChanged">False</param>
+            <module name="SubmitButton">
+                <param name="allowSoftSubmit">True</param>
+                <param name="updatePermalink">True</param>
+                <module name="JobStatus" layoutPanel="mainSearchControls">
+                    <param name="resultsLink">
+                        <param name="popup">True</param>
+                        <param name="transformedResultsViewTarget">report_builder_format_report</param>
+                        <param name="viewTarget">report_builder_define_data</param>
+                    </param>
+                    <param name="actionsMenuFilter">flashtimeline</param>
+                    <param name="showSaveMenu">False</param>
+                    <param name="showCreateMenu">False</param>
+                    <module name="EnablePreview">
+                        <param name="enable">true</param>
+                        <param name="display">false</param>
+                        <module name="FlashTimeline" layoutPanel="panel_row1_col1">
+                            <param name="height">250px</param>
+                            <param name="width">95%</param>
+                            <param name="enableResize">False</param>
+
+
+                            <!-- Custom Module for Context change here -->
+
+                            <module name="Heatwave" layoutPanel="panel_row2_col1">
+                                <module name="HeatwaveDrilldown">
+                                    <param name="search">index=splunkgit source="git_repo" repository=thisFieldWillBeSpecifiedByClick | dedup commit_hash | search author_name=* | timechart bins=30 count(commit_hash) by author_name limit=0 span=1</param>
+                                    <module name="Heatwave" layoutPanel="panel_row3_col1"></module>
+                                    <module name="Paginator" layoutPanel="panel_row4_col1">
+                                        <param name="entityName">events</param>
+
+                                        <module name="SimpleResultsTable" layoutPanel="panel_row4_col1">
+                                            <param name="entityName">events</param>
+                                        </module>
+
+                                    </module>
+                                </module>
+                            </module>
+                        </module>
+                    </module>
+                    <!-- close EnablePreview -->
+                </module>
+                <!-- close JobStatus -->
+            </module>
+            <!-- close SubmitButton -->
+        </module>
+        <!-- close TimeRangePicker -->
+    </module>
+    <!-- close SearchBar -->
+
+</view>
+
+
