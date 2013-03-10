@@ -184,7 +184,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     calculateYDomain: function(data){
-        return data[this.argmax(data)].map(function (d) {return d[0];});
+        var allFields= data.map(function (col) { return col.map( function (d) { return d[0]; }); });
+        return d3.merge(allFields);
+        //return data[this.argmax(data)].map(function (d) {return d[0];});
         //var that= this;
         //return [d3.min(data, function (colData) { return that.getBucket(colData[0])[0]; }), //selectAll rect?
         //    d3.max(data, function (colData) { return that.getBucket(colData[colData.length-1])[1]; })];
@@ -196,12 +198,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     updateYScale: function(data, height){
-        var yDom= this.calculateYDomain(data),
-            nBuckets= d3.max(data, function (d) { return d.length; }); //(yDom[1]-yDom[0])/d3.max(data, function (d) { return d._bucketSpan; });
-
-        this.bucketHeight= height / (nBuckets);
+        var yDom= this.calculateYDomain(data);
 
         this.yScale= this.calculateYScale(yDom, height);
+
+        var nBuckets= this.yScale.domain().length;
+
+        this.bucketHeight= height / (nBuckets);
 
         var yAxis= d3.svg.axis()
             .scale(this.yScale)
@@ -352,7 +355,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var colorDom= [d3.min(data, function (d) { return d._extent[0]; }) + this.colorOffset,
             d3.max(data, function (d){ return d._extent[1]; }) + this.colorOffset];
 
-        this.colorScale= d3.scale.log().domain(colorDom).range(["white","#CC0000"]);
+        this.colorScale= this.colorScale.domain(colorDom).range(this.colorRange);
     },
 
     updateThresholdLines : function(){
@@ -463,6 +466,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     //############################################################
 
     initialize: function($super, container) {
+        $super(container);
+
         this.svg= d3.select(container).select("svg");
         this.heatMap= this.svg.append("g")
             .attr("class","heatMap");
@@ -477,9 +482,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.durationTime = 500;
         this.colorOffset= 1;
-        this.nDrilldownBuckets= 30;
+        this.colorRange= [this.getParam("lowerColorRange","white"),
+            this.getParam("upperColorRange","#CC0000")];
 
-        $super(container);
+        this.colorScale= (this.getParam("colorScale","log") === "linear") ?
+            d3.scale.linear() :
+            d3.scale.log();
+
+        this.nDrilldownBuckets= 30;
 
         this.requiredFields = [];
         //Context flow gates
@@ -497,6 +507,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             colorDom= this.colorScale.domain(),
             step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
         this.setMetaData(earliestTime, latestTime, d, step.toFixed(2));
+    },
+
+    getParam : function(str, defaultValue) {
+        var value= this._params[str];
+        return value ? value : defaultValue;
     },
 
     parseMetaData: function(metaData){
