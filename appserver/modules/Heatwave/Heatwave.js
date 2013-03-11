@@ -43,8 +43,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var svgW= parseInt(this.svg.style("width")),
             svgH= parseInt(this.svg.style("height")),
-            heatMapHeight= svgH-padding,
-            heatMapWidth= svgW-xoff*2;
+            heatMapHeight= svgH-padding;
 
         // Remove first column (splunk sends empty bin)
         // This is done here because xDom needs to be calculated with the first column (so that the
@@ -52,6 +51,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         //data.splice(0,1);
 
         this.updateYScale(data, heatMapHeight);
+
+        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
+            heatMapWidth= svgW-xoff-yAxisBoundingBox.width;
+
         this.updateXScale(data, heatMapWidth, heatMapHeight);
         this.updateColorScale(data);
 
@@ -63,7 +66,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .filter(inRange);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(" + xoff + "," + (svgH - heatMapHeight - padding + 5) + ")");
+            .attr("transform", "translate(" + (yAxisBoundingBox.width) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         this.updateThresholdLines();
 
