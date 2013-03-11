@@ -66,7 +66,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .filter(inRange);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(" + (yAxisBoundingBox.width) + "," + (svgH - heatMapHeight - padding + 5) + ")");
+            .attr("transform", "translate(" + (yAxisBoundingBox.width + 5) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         this.updateThresholdLines();
 
