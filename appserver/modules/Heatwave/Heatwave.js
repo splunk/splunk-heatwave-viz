@@ -130,7 +130,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         function title(selection, colData) {
             selection
-                .text(function(d) {return colData._time + ":" + d;})
+                .text(function(d) {return colData._time + ";" + d[0] + ";" + d[1];})
         }
 
         function toColor(d) {
