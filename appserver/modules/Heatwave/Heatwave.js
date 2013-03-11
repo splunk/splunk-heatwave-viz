@@ -229,18 +229,12 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     onYAxisMouseOver: function (selection, that, d) {
         d3.select(selection).attr("class", "selected");
 
-        that.appendLine(that,
-            that.xScale(that.xDom[0]),
-            that.xScale(that.xDom[1]),
-            that.yScale(d),
-            that.yScale(d))
+        that.heatMap.insert("line","line.threshold")
+            .call(that.horizontal, that, that.yScale(d))
             .attr("class", "selection");
 
-        that.appendLine(that,
-            that.xScale(that.xDom[0]),
-            that.xScale(that.xDom[1]),
-            that.yScale(d) + that.bucketHeight,
-            that.yScale(d) + that.bucketHeight)
+        that.heatMap.insert("line","line.threshold")
+            .call(that.horizontal, that, that.yScale(d)+that.bucketHeight)
             .attr("class", "selection");
     },
 
@@ -282,7 +276,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     horizontal: function(selection, that, y) {
         selection.attr("x1", that.xScale(that.xDom[0]))
-            .attr("x2", that.xScale(that.xDom[1]))
+            .attr("x2", that.xScale(that.xDom[1]) + that.bucketWidth)
             .attr("y1", y)
             .attr("y2", y);
     },
