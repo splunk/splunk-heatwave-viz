@@ -518,11 +518,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     parseFieldFromMetaData: function(metaData){
-        var pattern1 = /\(PDT\)\:(.*)/;
-        var initialMatch = metaData.split(pattern1);
-        var pattern2 = /\,(.*)/;
-        var secondaryMatch = initialMatch[1].split(pattern2);
-        return secondaryMatch[0];
+        var metaDataArray = metaData.split(";");
+        return metaDataArray[1].toString();
     },
 
     metaTimeToEpoch: function(metaData){

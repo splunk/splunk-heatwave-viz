@@ -25,7 +25,7 @@ Splunk.Module.HeatwaveDrilldown = $.klass(Splunk.Module, {
         searchString = searchString.replace("thisFieldWillBeSpecifiedByClick", "\""+field+"\"");
         searchString = searchString.replace("thisSpanWillBeSpecifiedOnDrilldown", span);
 
-        //console.log("This is the modifiedSearch: "+searchString);
+        console.log("This is the modifiedSearch: "+searchString);
         return searchString;
     },
 
@@ -39,7 +39,7 @@ Splunk.Module.HeatwaveDrilldown = $.klass(Splunk.Module, {
             span = requiredFieldList[3];
         search.abandonJob();
 
-        //console.log("This is the oldSearch: "+  search);
+        console.log("This is the oldSearch: "+  search);
 
         if (this.sid) {
             search.job = Splunk.Globals.Jobber.buildJob(this.sid);
