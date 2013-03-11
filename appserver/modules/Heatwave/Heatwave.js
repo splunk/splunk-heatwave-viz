@@ -465,7 +465,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     //############################################################
-    // MAIN WAVE RENDERING
+    // Main Module Logic
     //############################################################
 
     initialize: function($super, container) {
@@ -524,12 +524,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     parseFieldFromMetaData: function(metaData){
-        var pattern1 = /(\:(?:.(?!\:))+$)/;
-        var pattern2 = /:(.*?),/;
+        var pattern1 = /\(PDT\)\:(.*)/;
         var initialMatch = metaData.split(pattern1);
+        var pattern2 = /\,(.*)/;
         var secondaryMatch = initialMatch[1].split(pattern2);
-        var field = secondaryMatch[1].replace(/\W+/g,"");
-        return field;
+        return secondaryMatch[0];
     },
 
     metaTimeToEpoch: function(metaData){
