@@ -34,10 +34,10 @@ class Thresholdify():
         self.discard_max = False
 
     def roundThreshold(self, threshold, buckets):
-        minThreshold = int(buckets[0].split("-")[0]) if (
-            threshold.min > int(buckets[0].split("-")[0])) else threshold.min
-        maxThreshold = int(buckets[-1].split("-")[1]) if (
-            threshold.max < int(buckets[-1].split("-")[1])) else threshold.max
+        minThreshold = int_or_float(buckets[0].split("-")[0]) if (
+            threshold.min > int_or_float(buckets[0].split("-")[0])) else threshold.min
+        maxThreshold = int_or_float(buckets[-1].split("-")[1]) if (
+            threshold.max < int_or_float(buckets[-1].split("-")[1])) else threshold.max
 
         return Threshold(minThreshold, maxThreshold)
 
@@ -45,7 +45,7 @@ class Thresholdify():
         result = 0
         for bucket in self.splunkHeader.getBucketFields():
             upperLimit = bucket.split('-')[1]
-            if int(upperLimit) <= self.threshold.min:
+            if int_or_float(upperLimit) <= self.threshold.min:
                 result += 1
 
         return result
@@ -60,7 +60,7 @@ class Thresholdify():
         result = 0
         for bucket in self.splunkHeader.getBucketFields():
             lowerLimit = bucket.split('-')[0]
-            if int(lowerLimit) >= self.threshold.max:
+            if int_or_float(lowerLimit) >= self.threshold.max:
                 result += 1
 
         return result
@@ -90,7 +90,7 @@ class Thresholdify():
     def mergeBuckets(self, bucketsToMerge):
         result = 0
         for bucket in bucketsToMerge:
-            result += int(bucket)
+            result += int_or_float(bucket)
         return result
 
     def getMergedFields(self, bucketFields):
@@ -102,7 +102,7 @@ class Thresholdify():
             result.append(minMerge)
 
         for bucket in bucketFields[self.minBuckets:(len(bucketFields) - self.maxBuckets)]:
-            result.append(int(bucket))
+            result.append(int_or_float(bucket))
 
         if not self.discard_max:
             result.append(maxMerge)
@@ -138,6 +138,10 @@ class Threshold():
         self.max = max
 
 
+def int_or_float(x):
+    return float(x) if "." in x else int(x)
+
+
 def main():
     import csv
     import sys
@@ -145,8 +149,8 @@ def main():
 
     (keywords, argvals) = splunk.Intersplunk.getKeywordsAndOptions()
 
-    threshold_min = int(argvals.get("min", 100000))
-    threshold_max = int(argvals.get("max", 220000))
+    threshold_min = int_or_float(argvals.get("min", 100000))
+    threshold_max = int_or_float(argvals.get("max", 220000))
     discard_min = bool(argvals.get("discard_min", False))
     discard_max = bool(argvals.get("discard_max", False))
 
@@ -229,6 +233,14 @@ class TestThresholdifyFunctions(unittest.TestCase):
     def test_createNewHeader_returnsHeaderWithThresholdBuckets(self):
         newHeader = self.thresholdifier.createHeaderWithThreshold()
         self.assertEqual(newHeader, ["_time", "<2", "2-3", ">3", "_span"])
+
+    def test_createNewHeaderWithFloats_returnsHeaderWithFloatThresholdBuckets(self):
+        header = ["_time", "0.0-10.0", "10.0-20.0", "20.0-30.0", "30.0-40.0", "_span"]
+
+        thresholdifierWithDiscardMin = Thresholdify(SplunkBucketHeaderParser(header), Threshold(15.0, 30.0))
+
+        self.assertEqual(thresholdifierWithDiscardMin.createHeaderWithThreshold(),
+                         ["_time", "<10.0", "10.0-20.0", "20.0-30.0", ">30.0", "_span"])
 
     def test_createNewHeaderWithMinDiscard_returnsHeaderWithThresholdBuckets(self):
         thresholdifierWithDiscardMin = Thresholdify(SplunkBucketHeaderParser(self.header), Threshold(2, 3))
