@@ -139,7 +139,10 @@ class Threshold():
 
 
 def int_or_float(x):
-    return float(x) if "." in x else int(x)
+    try:
+        return int(x)
+    except ValueError:
+        return float(x)
 
 
 def main():
