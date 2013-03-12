@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!--
+   Copyright 2013 Splunk Inc
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<view template="dashboard.html" stylesheet="hadoop_size.css">
+    <label>HadoopOps</label>
+    <module name="AccountBar" layoutPanel="appHeader"/>
+    <module name="AppBar" layoutPanel="navigationHeader"/>
+    <module name="Message" layoutPanel="messaging">
+        <param name="filter">*</param>
+        <param name="clearOnJobDispatch">False</param>
+        <param name="maxSize">1</param>
+    </module>
+
+    <module name="TitleBar" layoutPanel="viewHeader">
+        <param name="actionsMenuFilter">dashboard</param>
+    </module>
+
+    <module name="HiddenSearch" group="CPU" autoRun="True" layoutPanel="panel_row1_col1">
+        <param name="search">`hadoop_os` source="cpu" CPU="all" | eval heatmap = (100-pctIdle) | timechart avg(heatmap) by host limit=0</param>
+        <param name="earliest">1360614000</param>
+        <param name="latest">1360615800</param>
+        <module name="EnablePreview">
+            <param name="enable">true</param>
+            <param name="display">false</param>
+            <!-- Custom Module for Context change here -->
+
+            <module name="Heatwave">
+                <param name="upperColorRange">#0000CC</param>
+                <param name="colorScale">linear</param>
+            </module>
+        </module>
+        <!-- close EnablePreview -->
+    </module>
+    <!-- close HiddenSearch -->
+
+    <module name="HiddenSearch" group="MEM" autoRun="True" layoutPanel="panel_row1_col2">
+        <param name="search">`hadoop_os` source=vmstat | eval heatmap = round(memUsedPct, 2) | timechart span=1m avg(heatmap) by host limit=0</param>
+        <param name="earliest">1360614000</param>
+        <param name="latest">1360615800</param>
+        <module name="EnablePreview">
+            <param name="enable">true</param>
+            <param name="display">false</param>
+            <!-- Custom Module for Context change here -->
+
+            <module name="Heatwave">
+                <param name="upperColorRange">#0000CC</param>
+                <param name="colorScale">linear</param>
+            </module>
+        </module>
+        <!-- close EnablePreview -->
+    </module>
+    <!-- close HiddenSearch -->
+
+    <module name="HiddenSearch" group="DISK" autoRun="True" layoutPanel="panel_row2_col1">
+        <param name="search">`hadoop_os` source=df | convert memk(Avail) as avail memk(Used) as used | eval heatmap = round(used/avail*100, 2) | timechart span=5m avg(heatmap) by host limit=0</param>
+        <param name="earliest">1360614000</param>
+        <param name="latest">1360615800</param>
+        <module name="EnablePreview">
+            <param name="enable">true</param>
+            <param name="display">false</param>
+            <!-- Custom Module for Context change here -->
+
+            <module name="Heatwave">
+                <param name="upperColorRange">#0000CC</param>
+                <param name="colorScale">linear</param>
+            </module>
+        </module>
+        <!-- close EnablePreview -->
+    </module>
+    <!-- close HiddenSearch -->
+
+    <module name="HiddenSearch" group="I/O" autoRun="True" layoutPanel="panel_row2_col2">
+        <param name="search">`hadoop_os` source=iostat | eval io=rReq_PS + wReq_PS | timechart span=1m avg(io) by host limit=0</param>
+        <param name="earliest">1360614000</param>
+        <param name="latest">1360615800</param>
+        <module name="EnablePreview">
+            <param name="enable">true</param>
+            <param name="display">false</param>
+            <!-- Custom Module for Context change here -->
+
+            <module name="Heatwave">
+                <param name="upperColorRange">#0000CC</param>
+                <param name="colorScale">linear</param>
+            </module>
+        </module>
+        <!-- close EnablePreview -->
+    </module>
+    <!-- close HiddenSearch -->
+
+</view>

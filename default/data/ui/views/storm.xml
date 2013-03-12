@@ -17,7 +17,7 @@
 -->
 
 <view template="dashboard.html" stylesheet="dashboard_size.css">
-    <label>Unix</label>
+    <label>Storm</label>
     <module name="AccountBar" layoutPanel="appHeader"/>
     <module name="AppBar" layoutPanel="navigationHeader"/>
     <module name="Message" layoutPanel="messaging">
@@ -35,7 +35,11 @@
         <param name="useAssistant">true</param>
         <param name="useTypeahead">true</param>
         <param name="useOwnSubmitButton">False</param>
-        <param name="default">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | timechart avg(pctCPU) by COMMAND limit=30</param>
+        <param name="default">`storm_splunk`host=mt-indexer* OR host=mt-search*  sourcetype=splunkd
+            source=*metrics.log group=search_concurrency "system total" NOT user=*
+            | eval active_realtime_searches=-active_realtime_searches
+            | timechart span=10m max(active_hist_searches) as "Historical
+            Searches"  by host limit=0</param>
         <module name="TimeRangePicker">
             <param name="selected">All time</param>
             <param name="searchWhenChanged">False</param>
@@ -54,29 +58,22 @@
                     <module name="EnablePreview">
                         <param name="enable">true</param>
                         <param name="display">false</param>
-                        <module name="FlashTimeline" layoutPanel="panel_row1_col1">
-                            <param name="height">250px</param>
-                            <param name="width">95%</param>
-                            <param name="enableResize">False</param>
-
-
                             <!-- Custom Module for Context change here -->
 
-                            <module name="Heatwave" layoutPanel="panel_row2_col1">
-                                <param name="colorScale">linear</param>
-                                <module name="HeatwaveDrilldown">
-                                    <param name="search">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | search COMMAND=thisFieldWillBeSpecifiedByClick | timechart count by pctCPU limit=0 span=thisSpanWillBeSpecifiedOnDrilldown | threshold min=5 max=80 discard_min=1</param>
-                                    <module name="Heatwave" layoutPanel="panel_row3_col1">
-                                        <param name="colorScale">linear</param>
-                                    </module>
-                                    <module name="Paginator" layoutPanel="panel_row4_col1">
+                        <module name="Heatwave" layoutPanel="panel_row2_col1">
+                            <module name="HeatwaveDrilldown">
+                                <param name="search">`storm_splunk` host=thisFieldWillBeSpecifiedByClick  sourcetype=splunkd
+                                    source=*metrics.log group=search_concurrency "system total" NOT user=*
+                                    | eval active_realtime_searches=-active_realtime_searches
+                                    | timechart span=10m count  by active_hist_searches limit=0 span=thisSpanWillBeSpecifiedOnDrilldown</param>
+                                <module name="Heatwave" layoutPanel="panel_row3_col1"></module>
+                                <module name="Paginator" layoutPanel="panel_row4_col1">
+                                    <param name="entityName">events</param>
+
+                                    <module name="SimpleResultsTable" layoutPanel="panel_row4_col1">
                                         <param name="entityName">events</param>
-
-                                        <module name="SimpleResultsTable" layoutPanel="panel_row4_col1">
-                                            <param name="entityName">events</param>
-                                        </module>
-
                                     </module>
+
                                 </module>
                             </module>
                         </module>
