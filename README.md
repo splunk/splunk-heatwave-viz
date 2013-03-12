@@ -72,7 +72,7 @@ down to the Heatwave which is its child module.
 
 [Unix 2](/examples/unix2.png "Heatwave: Drilldown to specific process")
 The above image illustrates the Heatwave drill down functionallity. Here a parent Heatwave 
-displays the top 30 processes running on a system during the specified time. As a user you can
+displayes the top 30 processes running on a system during the specified time. As a user you can
 drill down on a specific process and view its behavior with finer granularity. Which is 
 displayed in the bottom Heatwave. 
 
