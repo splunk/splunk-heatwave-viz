@@ -489,6 +489,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.nDrilldownBuckets= 30;
 
         this.requiredFields = [];
+        console.log("INITIALIZE IS RUN");
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
@@ -527,6 +528,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return newDate.getTime()/1000.0;
     },
 
+    setRequiredFields: function(requiredFields){
+        this.requiredFields = requiredFields;
+    },
+
+    getRequiredFields: function(){
+        return this.requiredFields;
+    },
+
     setMetaData: function(epochStart, epochEnd, field, span){
         var context = this.getContext(),
             search = context.get("search");
@@ -539,9 +548,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             var searchRange = new Splunk.TimeRange(epochStart,epochEnd);
             search.setTimeRange(searchRange);
         }
-        this.requiredFields = [epochStart,epochEnd,field,span];
-        console.log(this.requiredFields);
-        search.setRequiredFields(this.requiredFields);
+        this.setRequiredFields([epochStart,epochEnd,field,span]);
+        search.setRequiredFields(this.getRequiredFields());
 
         context.set("search", search);
 
@@ -555,11 +563,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onJobProgress: function(event) {
-        var context = this.getContext();
-        var search  = context.get("search");
-        //if ((search.job.getResultCount() > 0) && (search.job.isPreviewable())) {
-            this.getResults();
-        //}
+        this.getResults();
     },
     
     getResultURL: function(params) {
@@ -579,7 +583,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     onBeforeJobDispatched: function(search) {
         search.setMinimumStatusBuckets(1);
-        search.setRequiredFields(this.requiredFields);
     },
 
     getResultParams: function($super) {
@@ -602,7 +605,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var context = this.getContext();
         if (context.get("search").job.isDone()) {
             this.getResults();
-        } else {
+        }else {
             this.doneUpstream = false;
         }
     },
@@ -612,7 +615,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     renderResults: function($super, jString) {
-        if (!jString) {
+        if (!jString || jString.toString().indexOf("<meta http-equiv=\"status\" content=\"400\" />") !== -1) {
             return;
         }
         if (jString.results === undefined){
@@ -635,6 +638,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     isReadyForContextPush: function($super) {
+
         if (!(this.doneUpstream)) {
             return Splunk.Module.DEFER;
         }
