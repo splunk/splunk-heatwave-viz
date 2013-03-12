@@ -25,6 +25,7 @@ to be visualized. The heatwave module and the drill down module comes with a set
 that can be applied though the xml.
 
 Heatwave
+
 title: Specifies title for the heat map plot. 
 upperColorLimit: Specifies upper color for the color range of the plotted heat map.
 lowerColorLimit: Specifies lower color for the color range of the plotted heat map.
@@ -32,6 +33,7 @@ colorScale: Specifies type of scale used for heat map coloring. Can be linear or
 default is log.
 
 HeatwaveDrilldown
+
 search: The literal search string HiddenSearch passes onto its child modules.
 earliest: This is used to define a beginning time range. It is expected if 'latest' is also 
 defined. It sets the start point of the time range to search within.
@@ -71,8 +73,8 @@ view the events between 3:30 and 3:35 it could be limited in the FlashTimeline a
 down to the Heatwave which is its child module.
 
 [Unix 2](/examples/unix2.png "Heatwave: Drilldown to specific process")
-The above image illustrates the Heatwave drill down functionallity. Here a parent Heatwave 
-displayes the top 30 processes running on a system during the specified time. As a user you can
+The above image illustrates the Heatwave drill down functionality. Here a parent Heatwave 
+displays the top 30 processes running on a system during the specified time. As a user you can
 drill down on a specific process and view its behavior with finer granularity. Which is 
 displayed in the bottom Heatwave. 
 
