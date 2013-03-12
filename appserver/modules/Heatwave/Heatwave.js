@@ -276,7 +276,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     horizontal: function(selection, that, y) {
         selection.attr("x1", that.xScale(that.xDom[0]))
-            .attr("x2", that.xScale(that.xDom[1]) + that.bucketWidth)
+            .attr("x2", that.xScale(that.xDom[1]))
             .attr("y1", y)
             .attr("y2", y);
     },
