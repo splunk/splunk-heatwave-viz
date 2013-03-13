@@ -66,19 +66,19 @@ Use case examples:
 In the following example we will view the percentage load of a cpu over time,
 with relation to the top 30 processes that are running during the specified timespan. 
 
-[Unix 1](/examples/unix1.png "Hearwave: Percentage cpu load per process")
+![Unix 1](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/unix1.png "Hearwave: Percentage cpu load per process")
 In the above image we see how Heatwave integrates well with other splunk modules such as the
 SearchBar and FlashTimeline. For example, if one would want to narrow the time range and only
 view the events between 3:30 and 3:35 it could be limited in the FlashTimeline and then passed
 down to the Heatwave which is its child module.
 
-[Unix 2](/examples/unix2.png "Heatwave: Drilldown to specific process")
+![Unix 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg2.png "Heatwave: Drilldown to specific process")
 The above image illustrates the Heatwave drill down functionality. Here a parent Heatwave 
 displays the top 30 processes running on a system during the specified time. As a user you can
 drill down on a specific process and view its behavior with finer granularity. Which is 
 displayed in the bottom Heatwave. 
 
-[Unix 3](/examples/unix3.png "Heatwave: Drilldown to specific data")
+![Unix 3](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/unix3.png "Heatwave: Drilldown to specific data")
 One can then drill down further into for example a SimpleResultsTable in order to view the 
 raw event information. 
 
@@ -88,20 +88,20 @@ compared to more standard metrics such as mean, min, max, and standard deviation
 ### SplunkGit
 The following example visualizes the number of commit for a set of git-repositories.
 
-[Splunkgit 1](/examples/splunkgit1.png "Heatwave: All commits to all git-repos during all-time")
+![Splunkgit 1](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg1.png "Heatwave: All commits to all git-repos during all-time")
 The above image shows how you could visualize a set of git repositories and the number of commits
 that have been made to them over a period of time. In this case all-time. The FlashTimeline 
 illustrates the volume of commits over time, while the heatwave illustrates the intensity of
 commits per repository over time.
 
-[Splunkgit 2](/examples/splunkgit2.png "Heatwave: Specify a time in FlashTimeline")
+![Splunkgit 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg2.png "Heatwave: Specify a time in FlashTimeline")
 Here we see how the FlashTimeline can be used to specify a set timeframe for the data to be
 pushed down to the Heatwave.
 
-[Splunkgit 3](/examples/splunkgit3.png "Heatwave: Drilldown on a specific time for all git-repos")
+![Splunkgit 3](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg3.png "Heatwave: Drilldown on a specific time for all git-repos")
 After the timespan has been pushed down the Heatwave visualizes the data.
 
-[Splunkgit 4](/examples/splunkgit4.png "HeatwaveL Drilldown on a specific git-repo")
+![Splunkgit 4](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg4.png "HeatwaveL Drilldown on a specific git-repo")
 We can also drill down further to view the meta data of the buckets.
 
 ### HadoopOps
