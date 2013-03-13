@@ -105,3 +105,14 @@ After the timespan has been pushed down the Heatwave visualizes the data.
 We can also drill down further to view the meta data of the buckets.
 
 ### HadoopOps
+[HadoopOps](/examples/hadoopOps1.png "Heatwave: Dashboard four heatwaves visualizing different metrics")
+Here you can see how one easily can visualize different metrics in a hadoop cluster before, 
+during, and after a job is run. The dashboard in the top left visualizes the CPU load for all 
+nodes. The Heatwave in the top right visualizes the memory load. The Heatwave in the bottom left
+visualizes disk usage, and the Heatwave in the bottom right is a visualization of I/O over all 
+the nodes. 
+
+From these four Heatwave tiles we can notice a couple of different trends. For example when the 
+job starts and ends, which nodes have overloaded and underloaded disk usage, as well as a I/O 
+anomaly. 
+
