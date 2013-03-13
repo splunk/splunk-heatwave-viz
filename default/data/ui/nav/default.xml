@@ -2,6 +2,4 @@
 	<view name="splunk-heatwave-viz" default="true"/>
 	<view name="splunkgit"/>
     <view name="unix"/>
-    <view name="storm"/>
-    <view name="hadoopops"/>
 </nav>
