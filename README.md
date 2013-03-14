@@ -62,6 +62,12 @@ Splunk-heatwave-viz can either be installed directly from splunkbase or download
 Use case examples:
 -----------------
 
+### On building your searches
+Heatwave relies heavily on the timechart command to bucket the data appropriatley. So when
+constructing a search queries you should keep in mind that the search needs to end with
+a "| timechart" command that buckets your data. Example searches can be seen below. The only
+exception to this is when you use our custom search command "threshold".
+
 ### Unix
 In the following example we will view the percentage load of a cpu over time,
 with relation to the top 30 processes that are running during the specified timespan. 
