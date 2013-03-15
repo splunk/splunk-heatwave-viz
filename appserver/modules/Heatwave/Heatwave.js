@@ -41,9 +41,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             return;
         }
 
-        var svgW= parseInt(this.svg.style("width")),
-            svgH= parseInt(this.svg.style("height")),
+        var svgW= this.parentDiv.node().getBoundingClientRect().width,
+            svgH= this.parentDiv.node().getBoundingClientRect().height,
             heatMapHeight= svgH-padding;
+
 
         // Remove first column (splunk sends empty bin)
         // This is done here because xDom needs to be calculated with the first column (so that the
@@ -465,6 +466,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     initialize: function($super, container) {
         $super(container);
 
+        this.parentDiv = d3.select(container).select("div");
         this.svg= d3.select(container).select("svg");
         this.heatMap= this.svg.append("g")
             .attr("class","heatMap");
