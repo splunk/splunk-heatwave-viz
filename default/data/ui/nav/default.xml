@@ -1,3 +1,5 @@
 <nav>
 	<view name="splunk-heatwave-viz" default="true"/>
+	<view name="splunkgit"/>
+    <view name="unix"/>
 </nav>

@@ -1,9 +1,14 @@
 .panel_row1_col .layoutCell {
-	height:350px !important;
 }
 .panel_row2_col .layoutCell{
-    padding-top: 60px !important;
+    padding-top: 10px !important;
 }
 .panel_row3_col .layoutCell{
-    padding-top: 60px !important;
+    padding-top: 10px !important;
+}
+.panel_row4_col .layoutCell{
+    padding-top: 10px !important;
+}
+.Heatwave {
+    height: 350px !important;
 }
