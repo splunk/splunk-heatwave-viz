@@ -36,7 +36,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
-        if (span === undefined) {
+        if (span === undefined){
             console.log("ERROR - Span is undefined!");
             return;
         }
@@ -224,7 +224,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     getValue: function (d) {
         return d[1];
     },
-
+    
     clearPlot: function() {
         this.heatMapStage.selectAll("g.col").remove();
         this.xDom= null;
