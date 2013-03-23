@@ -78,7 +78,7 @@ SearchBar and FlashTimeline. For example, if one would want to narrow the time r
 view the events between 3:30 and 3:35 it could be limited in the FlashTimeline and then passed
 down to the Heatwave which is its child module.
 
-![Unix 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg2.png "Heatwave: Drilldown to specific process")
+![Unix 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/unix2.png "Heatwave: Drilldown to specific process")
 The above image illustrates the Heatwave drill down functionality. Here a parent Heatwave 
 displays the top 30 processes running on a system during the specified time. As a user you can
 drill down on a specific process and view its behavior with finer granularity. Which is 
