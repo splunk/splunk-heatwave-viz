@@ -26,10 +26,10 @@ that can be applied though the xml.
 
 Heatwave
 
-title: Specifies title for the heat map plot. 
-upperColorLimit: Specifies upper color for the color range of the plotted heat map.
-lowerColorLimit: Specifies lower color for the color range of the plotted heat map.
-colorScale: Specifies type of scale used for heat map coloring. Can be linear or log, 
+- title: Specifies title for the heat map plot. 
+- upperColorRange: Specifies upper color for the color range of the plotted heat map.
+- lowerColorRange: Specifies lower color for the color range of the plotted heat map.
+- colorScale: Specifies type of scale used for heat map coloring. Can be linear or log, 
 default is log.
 
 HeatwaveDrilldown
