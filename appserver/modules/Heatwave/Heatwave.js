@@ -104,7 +104,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var params = $super();
         var sid = this.getSID();
 
-        if (!sid) this.logger.error(this.moduleType, "Assertion Failed.");
+        if (!sid) {
+            this.logger.error(this.moduleType, "Assertion Failed.");
+        }
 
         params.sid = sid;
         return params;
@@ -155,9 +157,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.onNewSIDClearPlot();
 
         var that= this;
-        $("document").ready(function() {
-            that.plot(resultsDict);
-        });
+        that.plot(resultsDict);
 
         this.gettingResults = false;
     },
@@ -319,8 +319,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function title(selection, colData) {
-            selection
-                .text(function(d) {return colData._time + ";" + d[0] + ";" + d[1];})
+            selection.text(function(d) {return colData._time + ";" + d[0] + ";" + d[1];});
         }
 
         function toColor(d) {
@@ -406,7 +405,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     argmax: function(arr) {
         var lengths= arr.map(function (d) { return d.length; });
-        return lengths.indexOf(d3.max(lengths))
+        return lengths.indexOf(d3.max(lengths));
     },
 
     calculateYDomain: function(data){
@@ -639,7 +638,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     toTime: function (t){
         var st= t.indexOf("=");
-        return (t.substring(st+1))
+        return (t.substring(st+1));
     },
 
     getBucketFromStr: function (str){
