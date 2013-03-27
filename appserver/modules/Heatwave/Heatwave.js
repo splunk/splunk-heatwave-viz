@@ -16,6 +16,179 @@
 
 Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
+
+    //############################################################
+    // Main Module Logic
+    //############################################################
+
+    initialize: function($super, container) {
+        $super(container);
+        console.log("INITIALIZE IS RUN");
+
+        this.parentDiv = d3.select(container).select("div");
+        this.svg= d3.select(container).select("svg");
+        this.heatMap= this.svg.append("g")
+            .attr("class","heatMap");
+        this.heatMapStage= this.heatMap.append("g")
+            .attr("class","heatMapStage");
+
+        this.heatMap.append("g")
+            .attr("class", "axis x");
+        this.heatMap.append("g")
+            .attr("class", "axis y");
+
+        this.durationTime = 500;
+        this.colorOffset= 1;
+        this.colorRange= [this.getParam("lowerColorRange","white"),
+            this.getParam("upperColorRange","#CC0000")];
+
+        this.colorScale= (this.getParam("colorScale","log") === "linear") ?
+            d3.scale.linear() :
+            d3.scale.log();
+
+        this.nDrilldownBuckets= 30;
+
+        this.requiredFields = [];
+        //Context flow gates
+        this.doneUpstream = false;
+        this.gettingResults = false;
+        this.sid= this.getSID();
+    },
+
+    getParam : function(str, defaultValue) {
+        var value= this._params[str];
+        return value ? value : defaultValue;
+    },
+
+    setMetaData: function(epochStart, epochEnd, field, span){
+        var context = this.getContext(),
+            search = context.get("search");
+        search.abandonJob();
+
+        //Check is needed since some splunk modules define endTime as false or undefined in allTime searches
+        if(typeof epochEnd === false || typeof epochEnd === undefined){
+            console.log("epochEnd is false or undefined");
+            epochEnd = new Date().getTime() / 1000;
+            var searchRange = new Splunk.TimeRange(epochStart,epochEnd);
+            search.setTimeRange(searchRange);
+        }
+        this.setRequiredFields([epochStart,epochEnd,field,span]);
+        search.setRequiredFields(this.getRequiredFields());
+
+        context.set("search", search);
+
+        if(this.doneUpstream && !(this.gettingResults)){
+            this.pushContextToChildren(context);
+        }
+    },
+
+    setRequiredFields: function(requiredFields){
+        this.requiredFields = requiredFields;
+    },
+
+    getRequiredFields: function(){
+        return this.requiredFields;
+    },
+
+    pushContextToChildren: function($super, explicitContext){
+        return $super(explicitContext);
+    },
+
+    getResultURL: function(params) {
+        var searchJobId = this.getSID();
+        var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
+        return uri;
+    },
+
+    getResultParams: function($super) {
+        var params = $super();
+        var sid = this.getSID();
+
+        if (!sid) {
+            this.logger.error(this.moduleType, "Assertion Failed.");
+        }
+
+        params.sid = sid;
+        return params;
+    },
+
+    getModifiedContext: function() {
+        return this.getContext();
+    },
+
+    onContextChange: function() {
+        var context = this.getContext();
+        if (context.get("search").job.isDone()) {
+            this.getResults();
+        }else {
+            this.doneUpstream = false;
+        }
+    },
+
+    onJobProgress: function(event) {
+        this.getResults();
+    },
+
+    onJobDone: function(){
+        this.getResults();
+    },
+
+    getResults: function($super) {
+        this.doneUpstream = true;
+        this.gettingResults = true;
+        return $super();
+    },
+
+    onBeforeJobDispatched: function(search) {
+        search.setMinimumStatusBuckets(1);
+    },
+
+    renderResults: function($super, jString) {
+        if (!jString || jString.toString().indexOf("<meta http-equiv=\"status\" content=\"400\" />") !== -1) {
+            return;
+        }
+
+        if (jString.results === undefined){
+            resultsDict = JSON.parse(jString);
+        }else{
+            resultsDict = jString.results;
+        }
+
+        this.onNewSIDClearPlot();
+
+        var that= this;
+        that.plot(resultsDict);
+
+        this.gettingResults = false;
+    },
+
+    onNewSIDClearPlot: function() {
+        var newSID= this.getSID();
+        if ((this.sid) && (this.sid !== newSID)){
+            this.clearPlot();
+        }
+        this.sid= newSID;
+    },
+
+    getSID: function() {
+        return this.getContext().get("search").job.getSID();
+    },
+
+    isReadyForContextPush: function($super) {
+
+        if (!(this.doneUpstream)) {
+            return Splunk.Module.DEFER;
+        }
+        if (this.gettingResults) {
+            return Splunk.Module.DEFER;
+        }
+        return Splunk.Module.CONTINUE;
+    },
+
+    //############################################################
+    // Main plot function
+    //############################################################
+
     plot: function(jString){
 
         if (jString.length === 0){
@@ -36,14 +209,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             span= data[0]._span;
 
-        if (span === undefined) {
+        if (span === undefined){
             console.log("ERROR - Span is undefined!");
             return;
         }
 
-        var svgW= parseInt(this.svg.style("width")),
-            svgH= parseInt(this.svg.style("height")),
+        var svgW= this.parentDiv.node().getBoundingClientRect().width,
+            svgH= this.parentDiv.node().getBoundingClientRect().height,
             heatMapHeight= svgH-padding;
+
 
         // Remove first column (splunk sends empty bin)
         // This is done here because xDom needs to be calculated with the first column (so that the
@@ -100,8 +274,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 })
                 .on("click", function(){
                     var metaData = d3.select(this).select("title").text(), //There should be better solution like this.parent.data()._time?
-                        epoch= HeatMapPlot.metaTimeToEpoch(HeatMapPlot.parseMetaData(metaData)),
-                        field = HeatMapPlot.parseFieldFromMetaData(metaData),
+                        epoch= metaTimeToEpoch(parseMetaData(metaData)),
+                        field = parseFieldFromMetaData(metaData),
                         colorDom= HeatMapPlot.colorScale.domain(),
                         step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
                         HeatMapPlot.setMetaData(epoch, epoch + span, field, step.toFixed(2));
@@ -128,9 +302,24 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             join.exit().remove();
         }
 
+        function metaTimeToEpoch(metaData){
+            var newDate = new Date(metaData.toString());
+            return newDate.getTime()/1000.0;
+        }
+
+        function parseMetaData(metaData){
+            var pattern = /([^\(]+)/;
+            var time = metaData.split(pattern);
+            return time[1];
+        }
+
+        function parseFieldFromMetaData(metaData){
+            var metaDataArray = metaData.split(";");
+            return metaDataArray[1].toString();
+        }
+
         function title(selection, colData) {
-            selection
-                .text(function(d) {return colData._time + ";" + d[0] + ";" + d[1];})
+            selection.text(function(d) {return colData._time + ";" + d[0] + ";" + d[1];});
         }
 
         function toColor(d) {
@@ -175,6 +364,39 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         //HeatMapPlot.xScale= xScale;
     },
 
+    parseData: function(jString) {
+        this.lowerThreshold= [];
+        this.upperThreshold= [];
+        var data= [];
+        //sort data according to bucket values
+        for(var col=0; col<jString.length; col++){
+            var tmp= [];
+            for(var bucket in jString[col]){
+                if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
+                    if (bucket[0] === "<"){
+                        this.lowerThreshold.push(bucket);
+                    }
+                    else if (bucket[0] === ">"){
+                        this.upperThreshold.push(bucket);
+                    }
+                    var tmpBucket= bucket;//=this.getBucketFromStr(bucket);
+                    tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
+                }
+            }
+            tmp._time= new Date(jString[col]._time);
+            tmp._span= eval(jString[col]._span);
+            tmp._extent= d3.extent(tmp, this.getValue);
+            //var firstBucket= tmp[0][0];
+            tmp._bucketSpan= "None";//firstBucket[1]-firstBucket[0];
+            data.push(tmp);
+        }
+        return data;
+    },
+
+    getValue: function (d) {
+        return d[1];
+    },
+    
     clearPlot: function() {
         this.heatMapStage.selectAll("g.col").remove();
         this.xDom= null;
@@ -183,7 +405,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     argmax: function(arr) {
         var lengths= arr.map(function (d) { return d.length; });
-        return lengths.indexOf(d3.max(lengths))
+        return lengths.indexOf(d3.max(lengths));
     },
 
     calculateYDomain: function(data){
@@ -241,6 +463,21 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     onYAxisMouseOut: function (selection, that, d) {
         d3.select(selection).attr("class","");
         that.heatMap.selectAll("line.selection").remove();
+    },
+
+    drillDownOnYAxisField: function(d){
+        var context = this.getContext(),
+            search = context.get("search"),
+            timeRange = search.getTimeRange(),
+            earliestTime = timeRange.getRelativeEarliestTime(),
+            latestTime = timeRange.getRelativeLatestTime(),
+            colorDom= this.colorScale.domain(),
+            step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
+        this.setMetaData(earliestTime, latestTime, d, step.toFixed(2));
+    },
+
+    getTimeRange: function() {
+        return this.getContext().get("search").getTimeRange();
     },
 
     onXAxisMouseOver: function (selection, that, d) {
@@ -401,7 +638,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     toTime: function (t){
         var st= t.indexOf("=");
-        return (t.substring(st+1))
+        return (t.substring(st+1));
     },
 
     getBucketFromStr: function (str){
@@ -413,238 +650,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return d[0];
     },
 
-    getValue: function (d) {
-        return d[1];
-    },
-
     isNum: function(n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
-    },
-
-    parseData: function(jString) {
-        this.lowerThreshold= [];
-        this.upperThreshold= [];
-        var data= [];
-        //sort data according to bucket values
-        for(var col=0; col<jString.length; col++){
-            var tmp= [];
-            for(var bucket in jString[col]){
-                if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
-                    if (bucket[0] === "<"){
-                        this.lowerThreshold.push(bucket);
-                    }
-                    else if (bucket[0] === ">"){
-                        this.upperThreshold.push(bucket);
-                    }
-                    var tmpBucket= bucket;//=this.getBucketFromStr(bucket);
-                    tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
-                }
-            }
-            tmp._time= new Date(jString[col]._time);
-            tmp._span= eval(jString[col]._span);
-            tmp._extent= d3.extent(tmp, this.getValue);
-            //var firstBucket= tmp[0][0];
-            tmp._bucketSpan= "None";//firstBucket[1]-firstBucket[0];
-            data.push(tmp);
-        }
-        return data;
-    },
-
-    getTimeRange: function() {
-        return this.getContext().get("search").getTimeRange();
-    },
-
-    getSID: function() {
-        return this.getContext().get("search").job.getSID();
-    },
-
-    //############################################################
-    // Main Module Logic
-    //############################################################
-
-    initialize: function($super, container) {
-        $super(container);
-
-        this.svg= d3.select(container).select("svg");
-        this.heatMap= this.svg.append("g")
-            .attr("class","heatMap");
-        this.heatMapStage= this.heatMap.append("g")
-            .attr("class","heatMapStage");
-
-        this.heatMap.append("g")
-            .attr("class", "axis x");
-
-        this.heatMap.append("g")
-            .attr("class", "axis y");
-
-        this.durationTime = 500;
-        this.colorOffset= 1;
-        this.colorRange= [this.getParam("lowerColorRange","white"),
-            this.getParam("upperColorRange","#CC0000")];
-
-        this.colorScale= (this.getParam("colorScale","log") === "linear") ?
-            d3.scale.linear() :
-            d3.scale.log();
-
-        this.nDrilldownBuckets= 30;
-
-        this.requiredFields = [];
-        console.log("INITIALIZE IS RUN");
-        //Context flow gates
-        this.doneUpstream = false;
-        this.gettingResults = false;
-        this.sid= this.getSID();
-    },
-
-    drillDownOnYAxisField: function(d){
-        var context = this.getContext(),
-            search = context.get("search"),
-            timeRange = search.getTimeRange(),
-            earliestTime = timeRange.getRelativeEarliestTime(),
-            latestTime = timeRange.getRelativeLatestTime(),
-            colorDom= this.colorScale.domain(),
-            step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
-        this.setMetaData(earliestTime, latestTime, d, step.toFixed(2));
-    },
-
-    getParam : function(str, defaultValue) {
-        var value= this._params[str];
-        return value ? value : defaultValue;
-    },
-
-    parseMetaData: function(metaData){
-        var pattern = /([^\(]+)/;
-        var time = metaData.split(pattern);
-        return time[1];
-    },
-
-    parseFieldFromMetaData: function(metaData){
-        var metaDataArray = metaData.split(";");
-        return metaDataArray[1].toString();
-    },
-
-    metaTimeToEpoch: function(metaData){
-        var newDate = new Date(metaData.toString());
-        return newDate.getTime()/1000.0;
-    },
-
-    setRequiredFields: function(requiredFields){
-        this.requiredFields = requiredFields;
-    },
-
-    getRequiredFields: function(){
-        return this.requiredFields;
-    },
-
-    setMetaData: function(epochStart, epochEnd, field, span){
-        var context = this.getContext(),
-            search = context.get("search");
-        search.abandonJob();
-
-        //Check is needed since some splunk modules define endTime as false or undefined in allTime searches
-        if(typeof epochEnd === false || typeof epochEnd === undefined){
-            console.log("epochEnd is false or undefined");
-            epochEnd = new Date().getTime() / 1000;
-            var searchRange = new Splunk.TimeRange(epochStart,epochEnd);
-            search.setTimeRange(searchRange);
-        }
-        this.setRequiredFields([epochStart,epochEnd,field,span]);
-        search.setRequiredFields(this.getRequiredFields());
-
-        context.set("search", search);
-
-        if(this.doneUpstream && !(this.gettingResults)){
-            this.pushContextToChildren(context);
-        }
-    },
-
-    onJobDone: function(){
-        this.getResults();
-    },
-
-    onJobProgress: function(event) {
-        this.getResults();
-    },
-    
-    getResultURL: function(params) {
-        var context = this.getContext();
-        var search = context.get("search");
-        var searchJobId = search.job.getSearchId();
-
-        var uri = Splunk.util.make_url("splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-        return uri;
-    },
-
-    getResults: function($super) {
-        this.doneUpstream = true;
-        this.gettingResults = true;
-        return $super();
-    },
-
-    onBeforeJobDispatched: function(search) {
-        search.setMinimumStatusBuckets(1);
-    },
-
-    getResultParams: function($super) {
-        var params = $super();
-        var context = this.getContext();
-        var search = context.get("search");
-        var sid = search.job.getSearchId();
-
-        if (!sid) this.logger.error(this.moduleType, "Assertion Failed.");
-
-        params.sid = sid;
-        return params;
-    },
-
-    getModifiedContext: function() {
-        return this.getContext();
-    },
-
-    onContextChange: function() {
-        var context = this.getContext();
-        if (context.get("search").job.isDone()) {
-            this.getResults();
-        }else {
-            this.doneUpstream = false;
-        }
-    },
-
-    pushContextToChildren: function($super, explicitContext){
-        return $super(explicitContext);
-    },
-
-    renderResults: function($super, jString) {
-        if (!jString || jString.toString().indexOf("<meta http-equiv=\"status\" content=\"400\" />") !== -1) {
-            return;
-        }
-        if (jString.results === undefined){
-            resultsDict = eval(jString);
-        }else{
-            resultsDict = jString.results;
-        }
-        var newSID= this.getSID();
-        if ((this.sid) && (this.sid !== newSID)){
-            this.clearPlot();
-        }
-        this.sid= newSID;
-
-        var that= this;
-        $("document").ready(function() {
-            that.plot(resultsDict);
-        });
-
-        this.gettingResults = false;
-    },
-
-    isReadyForContextPush: function($super) {
-
-        if (!(this.doneUpstream)) {
-            return Splunk.Module.DEFER;
-        }
-        if (this.gettingResults) {
-            return Splunk.Module.DEFER;
-        }
-        return Splunk.Module.CONTINUE;
     }
 });

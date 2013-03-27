@@ -26,10 +26,10 @@ that can be applied though the xml.
 
 Heatwave
 
-title: Specifies title for the heat map plot. 
-upperColorLimit: Specifies upper color for the color range of the plotted heat map.
-lowerColorLimit: Specifies lower color for the color range of the plotted heat map.
-colorScale: Specifies type of scale used for heat map coloring. Can be linear or log, 
+- title: Specifies title for the heat map plot. 
+- upperColorRange: Specifies upper color for the color range of the plotted heat map.
+- lowerColorRange: Specifies lower color for the color range of the plotted heat map.
+- colorScale: Specifies type of scale used for heat map coloring. Can be linear or log, 
 default is log.
 
 HeatwaveDrilldown
@@ -62,6 +62,12 @@ Splunk-heatwave-viz can either be installed directly from splunkbase or download
 Use case examples:
 -----------------
 
+### On building your searches
+Heatwave relies heavily on the timechart command to bucket the data appropriatley. So when
+constructing a search queries you should keep in mind that the search needs to end with
+a "| timechart" command that buckets your data. Example searches can be seen below. The only
+exception to this is when you use our custom search command "threshold".
+
 ### Unix
 In the following example we will view the percentage load of a cpu over time,
 with relation to the top 30 processes that are running during the specified timespan. 
@@ -72,7 +78,7 @@ SearchBar and FlashTimeline. For example, if one would want to narrow the time r
 view the events between 3:30 and 3:35 it could be limited in the FlashTimeline and then passed
 down to the Heatwave which is its child module.
 
-![Unix 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/sg2.png "Heatwave: Drilldown to specific process")
+![Unix 2](https://raw.github.com/splunk/splunk-heatwave-viz/develop/examples/unix2.png "Heatwave: Drilldown to specific process")
 The above image illustrates the Heatwave drill down functionality. Here a parent Heatwave 
 displays the top 30 processes running on a system during the specified time. As a user you can
 drill down on a specific process and view its behavior with finer granularity. Which is 
