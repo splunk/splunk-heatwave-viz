@@ -243,11 +243,17 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var padding= 50,
             HeatMapPlot= this,
             data = this.parseData(jString),
+            span= data[0]._span,
             svgW= this.parentDiv.node().getBoundingClientRect().width,
             svgH= this.parentDiv.node().getBoundingClientRect().height,
             heatMapHeight= svgH-padding,
             yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
             heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
+
+        if (span === undefined){
+            console.log("ERROR - Span is undefined!");
+            return;
+        }
 
         if (this.getContext().get("search").job.isRealTimeSearch()){
             data.shift(); //Remove earliest column due to visual feature of "disappearing" buckets in realtime searches
@@ -259,17 +265,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.updateThresholdLines();
 
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
-            span= data[0]._span,
             newColumns= addColumns(join),
             bucketSpan= data[0]._bucketSpan,
             currentCols= this.heatMapStage
                 .selectAll("g.col")
                 .filter(inRange);
-
-        if (span === undefined){
-            console.log("ERROR - Span is undefined!");
-            return;
-        }
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
             .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.05) + "," + (svgH - heatMapHeight - padding + 5) + ")");
