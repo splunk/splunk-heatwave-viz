@@ -52,7 +52,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         //Context flow gates
         this.doneUpstream = false;
         this.gettingResults = false;
-        this.sid= this.getSID();
         this.setClicked(false);
     },
 
