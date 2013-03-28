@@ -240,15 +240,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     plot: function(jString){
 
-        var padding= 50,
+        var padding= 25,
             HeatMapPlot= this,
             data = this.parseData(jString),
             span= data[0]._span,
             svgW= this.parentDiv.node().getBoundingClientRect().width,
             svgH= this.parentDiv.node().getBoundingClientRect().height,
-            heatMapHeight= svgH-padding,
-            yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
-            heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
+            heatMapHeight= svgH-padding;
 
         if (span === undefined){
             console.log("ERROR - Span is undefined!");
@@ -260,6 +258,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         this.updateYScale(data, heatMapHeight);
+        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
+            heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
+
         this.updateXScale(data, heatMapWidth, heatMapHeight);
         this.updateColorScale(data);
         this.updateThresholdLines();
@@ -272,7 +273,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .filter(inRange);
 
         this.heatMap.transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.05) + "," + (svgH - heatMapHeight - padding + 5) + ")");
+            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         currentCols.each(updateRects)
             .call(move);
