@@ -53,6 +53,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.doneUpstream = false;
         this.gettingResults = false;
         this.sid= this.getSID();
+        this.setClicked(false);
     },
 
     getParam : function(str, defaultValue) {
@@ -70,8 +71,18 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.setField(field);
         this.setSpan(span);
 
+        this.setClicked(true);
         this.getModifiedContext();
+        this.setClicked(false);
 
+    },
+
+    setClicked: function(state){
+        this.isClicked = state;
+    },
+
+    getClicked: function(){
+        return this.isClicked;
     },
 
     setEpochStart: function(epochStart) {
@@ -132,30 +143,33 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getModifiedContext: function() {
-        var context = this.getContext(),
-            search = context.get("search"),
-            epochEnd = this.getEpochEnd(),
-            epochStart = this.getEpochStart(),
-            field = this.getField(),
-            span = this.getSpan();
-        search.abandonJob();
+        if(this.getClicked()){
+            var context = this.getContext(),
+                search = context.get("search"),
+                epochEnd = this.getEpochEnd(),
+                epochStart = this.getEpochStart(),
+                field = this.getField(),
+                span = this.getSpan();
+            search.abandonJob();
 
-        //Check is needed since some splunk modules define endTime as false or undefined in allTime searches
-        if(typeof epochEnd === false || typeof epochEnd === undefined){
-            console.log("epochEnd is false or undefined");
-            epochEnd = new Date().getTime() / 1000;
-            var searchRange = new Splunk.TimeRange(epochStart,epochEnd);
-            search.setTimeRange(searchRange);
+            //Check is needed since some splunk modules define endTime as false or undefined in allTime searches
+            if(typeof epochEnd === false || typeof epochEnd === undefined){
+                console.log("epochEnd is false or undefined");
+                epochEnd = new Date().getTime() / 1000;
+
+                var searchRange = new Splunk.TimeRange(epochStart,epochEnd);
+                search.setTimeRange(searchRange);
+            }
+            this.setRequiredFields([epochStart,epochEnd,field,span]);
+            search.setRequiredFields(this.getRequiredFields());
+
+            context.set("search", search);
+
+            if(this.doneUpstream && !(this.gettingResults)){
+                this.pushContextToChildren(context);
+            }
         }
-        this.setRequiredFields([epochStart,epochEnd,field,span]);
-        search.setRequiredFields(this.getRequiredFields());
-
-        context.set("search", search);
-
-        if(this.doneUpstream && !(this.gettingResults)){
-            this.pushContextToChildren(context);
-        }
-        return context;
+        return this.getContext();
     },
 
     setRequiredFields: function(requiredFields){
@@ -212,7 +226,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         if (jString.results === undefined){
-            resultsDict = JSON.parse(jString);
+            resultsDict = eval(jString);
         }else{
             resultsDict = jString.results;
         }
