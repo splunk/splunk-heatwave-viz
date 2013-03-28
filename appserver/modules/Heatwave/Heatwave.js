@@ -240,58 +240,39 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     plot: function(jString){
 
-        if (jString.length === 0){
-            return;
-        } else if (jString[0].count === 0){
-            return;
-        }
+        var padding= 50,
+            HeatMapPlot= this,
+            data = this.parseData(jString),
+            svgW= this.parentDiv.node().getBoundingClientRect().width,
+            svgH= this.parentDiv.node().getBoundingClientRect().height,
+            heatMapHeight= svgH-padding,
+            yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
+            heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
 
-        var xoff= 100, padding= 50;
-
-        var HeatMapPlot= this,
-            data = this.parseData(jString);
-
-        if (this.getTimeRange()._constructorArgs[1] === "rt"){
+        if (this.getContext().get("search").job.isRealTimeSearch()){
             data.shift(); //Remove earliest column due to visual feature of "disappearing" buckets in realtime searches
         }
 
+        this.updateYScale(data, heatMapHeight);
+        this.updateXScale(data, heatMapWidth, heatMapHeight);
+        this.updateColorScale(data);
+        this.updateThresholdLines();
+
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
-            span= data[0]._span;
+            span= data[0]._span,
+            newColumns= addColumns(join),
+            bucketSpan= data[0]._bucketSpan,
+            currentCols= this.heatMapStage
+                .selectAll("g.col")
+                .filter(inRange);
 
         if (span === undefined){
             console.log("ERROR - Span is undefined!");
             return;
         }
 
-        var svgW= this.parentDiv.node().getBoundingClientRect().width,
-            svgH= this.parentDiv.node().getBoundingClientRect().height,
-            heatMapHeight= svgH-padding;
-
-
-        // Remove first column (splunk sends empty bin)
-        // This is done here because xDom needs to be calculated with the first column (so that the
-        // time span can be shifted in the code below.
-        //data.splice(0,1);
-
-        this.updateYScale(data, heatMapHeight);
-
-        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
-            heatMapWidth= svgW-xoff-yAxisBoundingBox.width;
-
-        this.updateXScale(data, heatMapWidth, heatMapHeight);
-        this.updateColorScale(data);
-
-        var newColumns= addColumns(join);
-
-        var bucketSpan= data[0]._bucketSpan,
-            currentCols= this.heatMapStage
-                .selectAll("g.col")
-                .filter(inRange);
-
         this.heatMap.transition().duration(this.durationTime).ease("linear")
-            .attr("transform", "translate(" + (yAxisBoundingBox.width + 5) + "," + (svgH - heatMapHeight - padding + 5) + ")");
-
-        this.updateThresholdLines();
+            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.05) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         currentCols.each(updateRects)
             .call(move);
@@ -331,7 +312,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 })
                 .call(place)
                 .call(shape)
-                //.style("stroke","white") Instead of padding each column a stroke can be used.
                 .append("title")
                 .call(title, colData);
 
