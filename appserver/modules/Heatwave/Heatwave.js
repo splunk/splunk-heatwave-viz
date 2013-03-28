@@ -60,9 +60,84 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return value ? value : defaultValue;
     },
 
-    setMetaData: function(epochStart, epochEnd, field, span){
+    getSID: function() {
+        return this.getContext().get("search").job.getSID();
+    },
+
+    clicked: function(epochStart, epochEnd, field, span){
+        this.setEpochStart(epochStart);
+        this.setEpochEnd(epochEnd);
+        this.setField(field);
+        this.setSpan(span);
+
+        this.getModifiedContext();
+
+    },
+
+    setEpochStart: function(epochStart) {
+        this.epochStart = epochStart;
+    },
+
+    setEpochEnd: function(epochEnd) {
+        this.epochEnd = epochEnd;
+    },
+
+    setField: function(field) {
+        this.field = field;
+    },
+
+    setSpan: function(span) {
+        this.span = span;
+    },
+
+    getEpochStart: function() {
+        return this.epochStart;
+    },
+
+    getEpochEnd: function() {
+        return this.epochEnd;
+    },
+
+    getField: function() {
+        return this.field;
+    },
+
+    getSpan: function() {
+        return this.span;
+    },
+
+    getResultURL: function(params) {
+        var search = this.getContext().get('search'),
+            searchJobId = search.job.getSID();
+
+        if (search.job.isPreviewable()){
+            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
+        }else{
+            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results?output_mode=json");
+        }
+
+        return uri;
+    },
+
+    getResultParams: function($super) {
+        var params = $super();
+        var sid = this.getSID();
+
+        if (!sid) {
+            this.logger.error(this.moduleType, "Assertion Failed.");
+        }
+
+        params.sid = sid;
+        return params;
+    },
+
+    getModifiedContext: function() {
         var context = this.getContext(),
-            search = context.get("search");
+            search = context.get("search"),
+            epochEnd = this.getEpochEnd(),
+            epochStart = this.getEpochStart(),
+            field = this.getField(),
+            span = this.getSpan();
         search.abandonJob();
 
         //Check is needed since some splunk modules define endTime as false or undefined in allTime searches
@@ -80,6 +155,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         if(this.doneUpstream && !(this.gettingResults)){
             this.pushContextToChildren(context);
         }
+        return context;
     },
 
     setRequiredFields: function(requiredFields){
@@ -94,35 +170,22 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return $super(explicitContext);
     },
 
-    getResultURL: function(params) {
-        var searchJobId = this.getSID();
-        var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-        return uri;
-    },
-
-    getResultParams: function($super) {
-        var params = $super();
-        var sid = this.getSID();
-
-        if (!sid) {
-            this.logger.error(this.moduleType, "Assertion Failed.");
-        }
-
-        params.sid = sid;
-        return params;
-    },
-
-    getModifiedContext: function() {
-        return this.getContext();
-    },
-
     onContextChange: function() {
+        this.onNewSIDClearPlot();
         var context = this.getContext();
         if (context.get("search").job.isDone()) {
             this.getResults();
         }else {
             this.doneUpstream = false;
         }
+    },
+
+    onNewSIDClearPlot: function() {
+        var newSID= this.getSID();
+        if ((this.sid) && (this.sid !== newSID)){
+            this.clearPlot();
+        }
+        this.sid= newSID;
     },
 
     onJobProgress: function(event) {
@@ -154,24 +217,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             resultsDict = jString.results;
         }
 
-        this.onNewSIDClearPlot();
-
         var that= this;
         that.plot(resultsDict);
 
         this.gettingResults = false;
-    },
-
-    onNewSIDClearPlot: function() {
-        var newSID= this.getSID();
-        if ((this.sid) && (this.sid !== newSID)){
-            this.clearPlot();
-        }
-        this.sid= newSID;
-    },
-
-    getSID: function() {
-        return this.getContext().get("search").job.getSID();
     },
 
     isReadyForContextPush: function($super) {
@@ -278,7 +327,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                         field = parseFieldFromMetaData(metaData),
                         colorDom= HeatMapPlot.colorScale.domain(),
                         step= (colorDom[1]-colorDom[0]) / HeatMapPlot.nDrilldownBuckets;
-                        HeatMapPlot.setMetaData(epoch, epoch + span, field, step.toFixed(2));
+                        HeatMapPlot.clicked(epoch, epoch + span, field, step.toFixed(2));
                 })
                 .call(place)
                 .call(shape)
@@ -473,7 +522,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             latestTime = timeRange.getRelativeLatestTime(),
             colorDom= this.colorScale.domain(),
             step= (colorDom[1]-colorDom[0]) / this.nDrilldownBuckets;
-        this.setMetaData(earliestTime, latestTime, d, step.toFixed(2));
+        this.clicked(earliestTime, latestTime, d, step.toFixed(2));
     },
 
     getTimeRange: function() {
