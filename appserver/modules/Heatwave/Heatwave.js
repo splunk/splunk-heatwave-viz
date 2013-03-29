@@ -116,7 +116,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return this.span;
     },
 
-    getResultURL: function(params) {
+    /*getResultURL: function(params) {
         var search = this.getContext().get('search'),
             searchJobId = search.job.getSID();
 
@@ -127,7 +127,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         return uri;
-    },
+    },*/
 
     getResultParams: function($super) {
         var params = $super();
@@ -219,19 +219,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         search.setMinimumStatusBuckets(1);
     },
 
-    renderResults: function($super, jString) {
-        if (!jString || jString.toString().indexOf("<meta http-equiv=\"status\" content=\"400\" />") !== -1) {
-            return;
-        }
+    renderResults: function($super, data) {
 
-        if (jString.results === undefined){
-            resultsDict = eval(jString);
-        }else{
-            resultsDict = jString.results;
-        }
-
+        console.log(data);
         var that= this;
-        that.plot(resultsDict);
+        that.plot(data);
 
         this.gettingResults = false;
     },
@@ -251,12 +243,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     // Main plot function
     //############################################################
 
-    plot: function(jString){
+    plot: function(inData){
 
         var padding= 25,
             HeatMapPlot= this,
-            data = this.parseData(jString),
-            span= data[0]._span,
+            //data = this.parseData(jString),
+            data = inData;
+            span= data.span,
             svgW= this.parentDiv.node().getBoundingClientRect().width,
             svgH= this.parentDiv.node().getBoundingClientRect().height,
             heatMapHeight= svgH-padding;
@@ -280,7 +273,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var join= this.heatMapStage.selectAll("g.col").data(data, HeatMapPlot.getMetaData),
             newColumns= addColumns(join),
-            bucketSpan= data[0]._bucketSpan,
+            bucketSpan= data._bucketSpan,
             currentCols= this.heatMapStage
                 .selectAll("g.col")
                 .filter(inRange);
@@ -423,7 +416,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 }
             }
             tmp._time= new Date(jString[col]._time);
-            tmp._span= eval(jString[col]._span);
+            tmp.span= eval(jString[col].span);
             tmp._extent= d3.extent(tmp, this.getValue);
             data.push(tmp);
         }
@@ -446,7 +439,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     calculateYDomain: function(data){
-        var allFields= data.map(function (col) { return col.map( function (d) { return d[0]; }); });
+        var allFields= data.fields;//map(function (col) { return col.map( function (d) { return d[0]; }); });
         return d3.merge(allFields);
     },
 
@@ -555,7 +548,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.updateXDom(data);
 
         // leave 1 pixel for space between columns
-        var nColumns= (this.xDom[1].getTime() - this.xDom[0].getTime()) / (data[0]._span * 1000);
+        var nColumns= (this.xDom[1].getTime() - this.xDom[0].getTime()) / (data.span * 1000);
         this.bucketWidth = (width / nColumns)-1;
 
         this.xScale= this.calculateXScale(this.xDom, width);
@@ -584,7 +577,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     updateXDom: function(data){
         var newXDom= d3.extent(data, this.getTime),
-            span= data[0]._span * 1000;
+            span= data.span * 1000;
 
         newXDom[1]= this.addTime(newXDom[1], span); //Changes time axis to deal with time spans not time points.
 
@@ -656,7 +649,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getMetaData: function (d) {
-        return d._time + "," + d._span;
+        return d._time + "," + d.span;
     },
 
     toTime: function (t){
