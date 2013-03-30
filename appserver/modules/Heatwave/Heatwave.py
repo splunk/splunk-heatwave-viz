@@ -33,7 +33,8 @@ class Heatwave(module.ModuleHandler):
         for idx, row in enumerate(rs):
             obj = {
                    'result': [], 
-                   '_time': unicode(row['_time']) 
+                   '_time': unicode(row['_time']),
+                   '_span': int(unicode(row['_span']))
                   }
             if span is None:
                 try:
