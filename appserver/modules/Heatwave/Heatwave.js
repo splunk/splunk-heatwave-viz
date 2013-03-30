@@ -116,19 +116,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return this.span;
     },
 
-    /*getResultURL: function(params) {
-        var search = this.getContext().get('search'),
-            searchJobId = search.job.getSID();
-
-        if (search.job.isPreviewable()){
-            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-        }else{
-            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results?output_mode=json");
-        }
-
-        return uri;
-    },*/
-
     getResultParams: function($super) {
         var params = $super();
         var sid = this.getSID();
@@ -221,7 +208,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     renderResults: function($super, data) {
 
-        console.log(data);
         if (!data.results.length){
             console.log("INFO - Waiting for data");
             return;
@@ -276,7 +262,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         var join= this.heatMapStage.selectAll("g.col").data(data, self.getMetaData),
             newColumns= addColumns(join),
-            bucketSpan= data._bucketSpan,
             currentCols= this.heatMapStage
                 .selectAll("g.col")
                 .filter(inRange);
@@ -330,7 +315,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             });
 
             join.transition().duration(this.durationTime).ease("linear")
-                .style("fill", toColor)
                 .call(place)
                 .call(shape)
                 .select("title")
@@ -345,8 +329,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function parseMetaData(metaData){
-            var pattern = /([^\(]+)/;
-            var time = metaData.split(pattern);
+            var pattern = /([^\(]+)/,
+                time = metaData.split(pattern);
             return time[1];
         }
 
@@ -387,8 +371,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .attr("width", self.bucketWidth)
                 .attr("height", self.bucketHeight)
                 .style("fill", toColor);
-            //.style("stroke", toColor)
-            //.style("stroke-width",1)
         }
 
         function place(selection) {
@@ -397,33 +379,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                     return self.yScale(self.getBucket(d));
                 });
         }
-    },
-
-    parseData: function(jString) {
-        this.lowerThreshold= [];
-        this.upperThreshold= [];
-        var data= [];
-        //sort data according to bucket values
-        for(var col=0; col<jString.length; col++){
-            var tmp= [];
-            for(var bucket in jString[col]){
-                if(jString[col].hasOwnProperty(bucket) && bucket[0] !== "_"){
-                    if (bucket[0] === "<"){
-                        this.lowerThreshold.push(bucket);
-                    }
-                    else if (bucket[0] === ">"){
-                        this.upperThreshold.push(bucket);
-                    }
-                    var tmpBucket= bucket;
-                    tmp.push([tmpBucket, parseFloat(jString[col][bucket])]);
-                }
-            }
-            tmp._time= new Date(jString[col]._time);
-            tmp.span= eval(jString[col].span);
-            tmp._extent= d3.extent(tmp, this.getValue);
-            data.push(tmp);
-        }
-        return data;
     },
 
     getValue: function (d) {
@@ -471,9 +426,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSize(6,3,3);
 
         var axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
-            .call(yAxis);
+            .call(yAxis),
+            that= this;
 
-        var that= this;
         this.heatMap.select("g.axis.y").selectAll("text")
             .on("mouseover", function (d) { that.onYAxisMouseOver(this, that, d); })
             .on("mouseout", function (d) { that.onYAxisMouseOut(this, that, d); })
@@ -551,7 +506,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     updateXScale: function(data, span, width, height) {
-
         this.updateXDom(data, span);
 
         // leave 1 pixel for space between columns
