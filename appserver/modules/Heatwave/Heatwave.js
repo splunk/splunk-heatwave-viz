@@ -39,10 +39,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.durationTime = 500;
         this.colorOffset= 1;
-        this.colorRange= [this.getParam("lowerColorRange","white"),
-            this.getParam("upperColorRange","#CC0000")];
+        this.colorRange= [this.getParam("lowerColorRange"),
+            this.getParam("upperColorRange")];
 
-        this.colorScale= (this.getParam("colorScale","log") === "linear") ?
+        this.colorScale= (this.getParam("colorScale") === "linear") ?
             d3.scale.linear() :
             d3.scale.log();
 
@@ -55,9 +55,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.setClicked(false);
     },
 
-    getParam : function(str, defaultValue) {
-        var value= this._params[str];
-        return value ? value : defaultValue;
+    getParam : function(str) {
+        return this._params[str];
     },
 
     getSID: function() {
