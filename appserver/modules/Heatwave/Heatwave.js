@@ -47,6 +47,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             d3.scale.log();
 
         this.nDrilldownBuckets= 30;
+        this.rowLimit = 100;
 
         this.requiredFields = [];
         //Context flow gates
@@ -116,19 +117,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return this.span;
     },
 
-    /*getResultURL: function(params) {
-        var search = this.getContext().get('search'),
-            searchJobId = search.job.getSID();
-
-        if (search.job.isPreviewable()){
-            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results_preview?output_mode=json");
-        }else{
-            var uri = Splunk.util.make_url("/splunkd/search/jobs/" + searchJobId + "/results?output_mode=json");
-        }
-
-        return uri;
-    },*/
-
     getResultParams: function($super) {
         var params = $super();
         var sid = this.getSID();
@@ -142,6 +130,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getModifiedContext: function() {
+        console.log("getModifiedContext");
         if(this.getClicked()){
             var context = this.getContext(),
                 search = context.get("search"),
@@ -185,7 +174,16 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     onContextChange: function() {
         this.onNewSIDClearPlot();
-        var context = this.getContext();
+
+        var context = this.getContext(),
+            search = context.get("search");
+
+        if (this.theSearchQueryIsProper()){
+            this.verifySearchLimit(context,search);
+        }else{
+            return;
+        }
+
         if (context.get("search").job.isDone()) {
             this.getResults();
         }else {
@@ -201,7 +199,69 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.sid= newSID;
     },
 
+    theSearchQueryIsProper: function(){
+        var context = this.getContext(),
+            search = context.get("search"),
+            subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
+
+        if (subSearch.indexOf("timechart") === -1){
+            console.log("The search query does not end with a timechart command.");
+            return false;
+        }
+        if (subSearch.indexOf("timechart") !== -1 && subSearch.indexOf("by") === -1){
+            console.log("The timechart command is missing a 'by' clause.");
+            return false;
+        }
+
+        return true;
+    },
+
+    verifySearchLimit: function(context,search){
+        var subSearch = this.getSubSearch(search),
+            newSearch = "",
+            limit = 0;
+
+        if(this.searchContainsLimit(subSearch)){
+            limit = this.getSearchLimit(subSearch);
+            if(limit > this.rowLimit){
+                newSearch = search.toString().replace("limit="+limit.toString(),"limit="+this.rowLimit.toString());
+                this.clampSearchLimit(context, search, newSearch);
+            }
+        }
+        if(!this.searchContainsLimit(subSearch)){
+            newSearch = search.toString().append("limit="+this.rowLimit);
+            this.clampSearchLimit(context, search, newSearch);
+        }
+    },
+
+    searchContainsLimit: function(subSearch){
+        if(subSearch.indexOf("limit") === -1){
+            return false;
+        }else{
+            return true;
+        }
+    },
+
+    clampSearchLimit: function(context, search, newSearch){
+        search.setBaseSearch(newSearch);
+        context.set("search",search);
+    },
+
+    getSearchLimit: function(subSearch){
+        var pattern = /limit=\d+/,
+            limit = subSearch.match(pattern)[0].split("=")[1];
+        return limit;
+    },
+
+    getSubSearch: function(search){
+        var subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
+        return subSearch;
+    },
+
     onJobProgress: function(event) {
+        if(!this.theSearchQueryIsProper()){
+            return;
+        }
         this.getResults();
     },
 
@@ -220,8 +280,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     renderResults: function($super, data) {
-
-        console.log(data);
         if (!data.results.length){
             console.log("INFO - Waiting for data");
             return;
@@ -272,7 +330,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.updateXScale(data, span, heatMapWidth, heatMapHeight);
         this.updateColorScale(fields);
-        //this.updateThresholdLines();
 
         var join= this.heatMapStage.selectAll("g.col").data(data, self.getMetaData),
             newColumns= addColumns(join),
@@ -295,10 +352,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         function addColumns(d3set) {
             return d3set.enter().insert("g","g.axis").attr("class", "col")
-                /*.on("mouseover", function (d) {
-                    HeatMapPlot.onXAxisMouseOver(this, HeatMapPlot, d); })
-                .on("mouseout", function (d) {
-                    HeatMapPlot.onXAxisMouseOut(this, HeatMapPlot, d);})*/
                 .call(moveIn);
         }
 
@@ -387,8 +440,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .attr("width", self.bucketWidth)
                 .attr("height", self.bucketHeight)
                 .style("fill", toColor);
-            //.style("stroke", toColor)
-            //.style("stroke-width",1)
         }
 
         function place(selection) {
