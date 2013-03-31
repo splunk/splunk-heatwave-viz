@@ -256,6 +256,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
 
         this.updateXScale(data, span, heatMapWidth, heatMapHeight);
+        this.renderXAxis(heatMapHeight);
         this.updateColorScale(fields);
         //this.updateThresholdLines();
 
@@ -515,18 +516,19 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.bucketWidth = (width / nColumns)-1;
 
         this.xScale= this.calculateXScale(this.xDom, width);
+    },
 
+    renderXAxis: function(height){
         var xAxis= d3.svg.axis()
             .scale(this.xScale)
             .orient("bottom")
             .ticks(10)
-            .tickSubdivide(nColumns / 9)
+            .tickSubdivide(10)
             .tickSize(6,3,3);
 
         this.transition(this.heatMap.select("g.axis.x"))
             .attr("transform", "translate(0," + (height) + ")")
             .call(xAxis);
-
     },
 
     addTime: function(date, time) {
