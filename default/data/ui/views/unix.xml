@@ -35,7 +35,7 @@
         <param name="useAssistant">true</param>
         <param name="useTypeahead">true</param>
         <param name="useOwnSubmitButton">False</param>
-        <param name="default">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | timechart avg(pctCPU) by COMMAND limit=30</param>
+        <param name="default">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | timechart avg(pctCPU) by COMMAND limit=30 useother=f</param>
         <module name="TimeRangePicker">
             <param name="selected">All time</param>
             <param name="searchWhenChanged">False</param>
@@ -65,7 +65,7 @@
                             <module name="Heatwave" layoutPanel="panel_row2_col1">
                                 <param name="colorScale">linear</param>
                                 <module name="HeatwaveDrilldown">
-                                    <param name="search">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | search COMMAND=thisFieldWillBeSpecifiedByClick | timechart count by pctCPU limit=0 span=thisSpanWillBeSpecifiedOnDrilldown | threshold min=5 max=80 discard_min=1</param>
+                                    <param name="search">index="os" sourcetype="ps" host=* | multikv fields pctCPU, COMMAND | search COMMAND=thisFieldWillBeSpecifiedByClick | timechart count by pctCPU limit=0 span=thisSpanWillBeSpecifiedOnDrilldown</param>
                                     <module name="Heatwave" layoutPanel="panel_row3_col1">
                                         <param name="colorScale">linear</param>
                                     </module>
