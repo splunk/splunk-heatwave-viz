@@ -37,7 +37,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.heatMap.append("g")
             .attr("class", "axis y");
 
-        this.durationTime = 500;
         this.colorOffset= 1;
         this.colorRange= [this.getParam("lowerColorRange"),
             this.getParam("upperColorRange")];
@@ -266,15 +265,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 .selectAll("g.col")
                 .filter(inRange);
 
-        this.heatMap.transition().duration(this.durationTime).ease("linear")
+        this.transition(this.heatMap)
             .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         currentCols.each(updateRects)
             .call(move);
 
-        join.exit()
-            .filter(function (d) { return !inRange(d); })
-            .transition().duration(this.durationTime)
+        this.transition(join.exit()
+            .filter(function (d) { return !inRange(d); }))
             .attr("opacity", 0)
             .remove();
 
@@ -314,7 +312,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 self.heatMap.select("g.axis.y").selectAll("text").data(d, String).classed("selected",false);
             });
 
-            join.transition().duration(this.durationTime).ease("linear")
+            self.transition(join)
                 .call(place)
                 .call(shape)
                 .select("title")
@@ -352,8 +350,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         function move(selection) {
-            selection
-                .transition().duration(self.durationTime).ease("linear")
+            self.transition(selection)
                 .attr("transform", function (d) { return "translate(" + self.xScale(d._time) + ",0)"; })
                 .attr("opacity", 1);
         }
@@ -379,6 +376,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                     return self.yScale(self.getBucket(d));
                 });
         }
+    },
+
+    transition: function(selection){
+        return selection.transition().duration(500).ease("linear");
     },
 
     render: function () {
@@ -426,7 +427,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .scale(this.yScale)
             .orient("left")
             .tickSize(6,3,3),
-            axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
+            axis= this.transition(this.heatMap.select("g.axis.y"))
                 .call(yAxis),
             that= this;
 
@@ -522,7 +523,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .tickSubdivide(nColumns / 9)
             .tickSize(6,3,3);
 
-        this.heatMap.select("g.axis.x").transition().duration(this.durationTime).ease("linear")
+        this.transition(this.heatMap.select("g.axis.x"))
             .attr("transform", "translate(0," + (height) + ")")
             .call(xAxis);
 
@@ -580,7 +581,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .call(this.horizontal, this, placeOver)
             .classed("threshold lower", true);
 
-        lowerThresholdLine.transition().duration(HeatMapPlot.durationTime)
+        this.transition(lowerThresholdLine)
             .attr({"y1": placeOver,
                 "y2": placeOver});
 
@@ -592,7 +593,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .call(this.horizontal, this, placeUnder)
             .classed("threshold upper", true);
 
-        upperThresholdLine.transition().duration(HeatMapPlot.durationTime)
+        this.transition(upperThresholdLine)
             .attr({"y1": placeUnder,
                 "y2": placeUnder});
 
