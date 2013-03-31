@@ -226,10 +226,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 this.clampSearchLimit(context, search, newSearch);
             }
         }
-        if(!this.searchContainsLimit(subSearch)){
-            newSearch = search.toString().concat("limit="+this.rowLimit);
-            this.clampSearchLimit(context, search, newSearch);
-        }
     },
 
     searchContainsLimit: function(subSearch){
