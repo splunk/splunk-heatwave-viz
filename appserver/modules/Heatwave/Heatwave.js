@@ -176,7 +176,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         var context = this.getContext(),
             search = context.get("search");
 
-        if (this.theSearchQueryIsProper()){
+        if (this.searchQueryIsProper()){
             this.verifySearchLimit(context,search);
         }else{
             return;
@@ -197,7 +197,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.sid= newSID;
     },
 
-    theSearchQueryIsProper: function(){
+    searchQueryIsProper: function(){
         var context = this.getContext(),
             search = context.get("search"),
             subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
@@ -257,7 +257,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     onJobProgress: function(event) {
-        if(!this.theSearchQueryIsProper()){
+        if(!this.searchQueryIsProper()){
             return;
         }
         this.getResults();
