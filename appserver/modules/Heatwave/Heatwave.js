@@ -46,7 +46,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             d3.scale.log();
 
         this.nDrilldownBuckets= 30;
-        this.rowLimit = 100;
+        this.rowLimit = 50;
 
         this.requiredFields = [];
         //Context flow gates
@@ -129,6 +129,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     getModifiedContext: function() {
         console.log("getModifiedContext");
+
         if(this.getClicked()){
             var context = this.getContext(),
                 search = context.get("search"),
@@ -177,9 +178,14 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             search = context.get("search");
 
         if (this.searchQueryIsProper()){
-            this.verifySearchLimit(context,search);
+            var limit = this.verifySearchLimit(context,search);
+            if (limit > this.rowLimit){
+                console.log("Limit is currently: "+limit);
+                console.log("Limit can only take values less than "+this.rowLimit);
+                search.job.cancel();
+            }
         }else{
-            return;
+            search.job.cancel();
         }
 
         if (context.get("search").job.isDone()) {
@@ -210,22 +216,22 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             console.log("The timechart command is missing a 'by' clause.");
             return false;
         }
-
         return true;
     },
 
     verifySearchLimit: function(context,search){
         var subSearch = this.getSubSearch(search),
-            newSearch = "",
             limit = 0;
 
         if(this.searchContainsLimit(subSearch)){
             limit = this.getSearchLimit(subSearch);
-            if(limit > this.rowLimit){
-                newSearch = search.toString().replace("limit="+limit.toString(),"limit="+this.rowLimit.toString());
-                this.clampSearchLimit(context, search, newSearch);
-            }
         }
+        return limit;
+    },
+
+    getSubSearch: function(search){
+        var subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
+        return subSearch;
     },
 
     searchContainsLimit: function(subSearch){
@@ -236,20 +242,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
     },
 
-    clampSearchLimit: function(context, search, newSearch){
-        search.setBaseSearch(newSearch);
-        context.set("search",search);
-    },
-
     getSearchLimit: function(subSearch){
         var pattern = /limit=\d+/,
             limit = subSearch.match(pattern)[0].split("=")[1];
         return limit;
-    },
-
-    getSubSearch: function(search){
-        var subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
-        return subSearch;
     },
 
     onJobProgress: function(event) {
