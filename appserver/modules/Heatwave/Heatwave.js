@@ -252,6 +252,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
 
         this.updateYScale(fields, heatMapHeight);
+        this.renderYAxis();
         var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
             heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
 
@@ -380,6 +381,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
     },
 
+    render: function () {
+
+    },
+
     getValue: function (d) {
         return d[1];
     },
@@ -413,19 +418,16 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.yScale= this.calculateYScale(yDom, height);
 
-        var nBuckets= this.yScale.domain().length;
+        this.bucketHeight= height / this.yScale.domain().length;
+    },
 
-        this.bucketHeight= height / (nBuckets);
-
+    renderYAxis: function(){
         var yAxis= d3.svg.axis()
             .scale(this.yScale)
             .orient("left")
-            .ticks(Math.min(nBuckets,10))
-            .tickSubdivide(0)
-            .tickSize(6,3,3);
-
-        var axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
-            .call(yAxis),
+            .tickSize(6,3,3),
+            axis= this.heatMap.select("g.axis.y").transition().duration(this.durationTime).ease("linear")
+                .call(yAxis),
             that= this;
 
         this.heatMap.select("g.axis.y").selectAll("text")
