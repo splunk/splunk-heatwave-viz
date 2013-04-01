@@ -50,6 +50,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.nDrilldownBuckets= 30;
         this.rowLimit = 50;
+        this.padding= 25;
 
         this.requiredFields = [];
         //Context flow gates
@@ -308,8 +309,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.updateSvgDimensions();
 
-        var padding= 25,
-            self= this,
+        var self= this,
             data = inData.results,
             fields = d3.map(inData.fields),
             heatMapHeight= this.calculateHeatMapHeight();
@@ -329,7 +329,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             heatMapWidth= this.calculateHeatMapWidth();
 
         this.transition(this.heatMap)
-            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (this.svgH - heatMapHeight - padding + 5) + ")");
+            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (this.svgH - heatMapHeight - this.padding + 5) + ")");
 
         this.updateXScaleDomain(data);
         this.updateXScaleSize(heatMapWidth);
@@ -436,7 +436,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     calculateHeatMapHeight: function(){
-        return this.svgH-50;
+        return this.svgH-this.padding;
     },
 
     updateSpan: function(data){
@@ -471,7 +471,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         return selection.transition().duration(500).ease("linear");
     },
 
-    render: function (width, height) {
+    rerender: function (){
+        this.updateSvgDimensions();
+        var height= this.calculateHeatMapHeight(),
+            width= this.calculateHeatMapWidth();
 
         this.updateYScaleSize(height);
         this.updateXScaleSize(width);
