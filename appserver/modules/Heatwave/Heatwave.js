@@ -191,9 +191,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 console.log("Limit is currently: "+limit);
                 console.log("Limit can only take values less than "+this.rowLimit);
                 search.job.cancel();
+                console.log("The job is canceled.");
             }
         }else{
             search.job.cancel();
+            console.log("The job is canceled.");
         }
 
         if (context.get("search").job.isDone()) {
