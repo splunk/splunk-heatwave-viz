@@ -58,9 +58,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.gettingResults = false;
         this.setClicked(false);
 
-        $(window).resize(function (){
-
-        });
+        $(window).resize(this.rerender.bind(this));
     },
 
     getParam : function(str) {
@@ -327,16 +325,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.updateYScaleDomain(fields);
         this.updateYScaleSize(heatMapHeight);
         this.renderYAxis();
-        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
-            heatMapWidth= this.calculateHeatMapWidth();
 
-        this.transition(this.heatMap)
-            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (this.svgH - heatMapHeight - this.padding + 5) + ")");
+        var heatMapWidth= this.calculateHeatMapWidth();
 
         this.updateXScaleDomain(data);
         this.updateXScaleSize(heatMapWidth);
         this.renderXAxis(heatMapHeight);
         this.updateColorScale(fields);
+
+        this.updateHeatMapPosition(heatMapHeight);
 
         var join= this.heatMapStage.selectAll("g.col").data(data, self.getMetaData),
             newColumns= addColumns(join),
@@ -475,21 +472,21 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     rerender: function (){
         this.updateSvgDimensions();
-        var height= this.calculateHeatMapHeight(),
-            width= this.calculateHeatMapWidth();
-
+        var height= this.calculateHeatMapHeight();
         this.updateYScaleSize(height);
+        this.renderYAxis();
+
+        var width= this.calculateHeatMapWidth();
+
         this.updateXScaleSize(width);
+        this.renderXAxis(height);
 
         this.heatMapStage.selectAll("g.col")
             .call(this.move, this);
 
         this.heatMapStage.selectAll("rect")
-            .call(this.place, this);
-
-        this.renderYAxis();
-        this.renderXAxis(height);
-
+            .call(this.place, this)
+            .call(this.shape, this);
     },
 
     updateBucketHeight: function (height){
@@ -581,6 +578,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     getTimeRange: function() {
         return this.getContext().get("search").getTimeRange();
+    },
+
+    updateHeatMapPosition: function(heatMapHeight) {
+        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect();
+
+        this.transition(this.heatMap)
+            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (this.svgH - heatMapHeight - this.padding + 5) + ")");
     },
 
     onXAxisMouseOver: function (selection, that, d) {
