@@ -34,8 +34,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
         this.heatMap.append("g")
             .attr("class", "axis x");
+        this.xScale= d3.time.scale();
+
         this.heatMap.append("g")
             .attr("class", "axis y");
+        this.yScale= d3.scale.ordinal();
 
         this.colorOffset= 1;
         this.colorRange= [this.getParam("lowerColorRange"),
@@ -53,6 +56,10 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.doneUpstream = false;
         this.gettingResults = false;
         this.setClicked(false);
+
+        $(window).resize(function (){
+
+        });
     },
 
     getParam : function(str) {
@@ -299,13 +306,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     plot: function(inData){
 
+        this.updateSvgDimensions();
+
         var padding= 25,
             self= this,
             data = inData.results,
             fields = d3.map(inData.fields),
-            svgW= this.parentDiv.node().getBoundingClientRect().width,
-            svgH= this.parentDiv.node().getBoundingClientRect().height,
-            heatMapHeight= svgH-padding;
+            heatMapHeight= this.calculateHeatMapHeight();
 
         this.updateSpan(inData);
 
@@ -315,12 +322,17 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             data.shift(); //Remove earliest column due to visual feature of "disappearing" buckets in realtime searches
         }
 
-        this.updateYScale(fields, heatMapHeight);
+        this.updateYScaleDomain(fields);
+        this.updateYScaleSize(heatMapHeight);
         this.renderYAxis();
         var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect(),
-            heatMapWidth= svgW * 0.95 - yAxisBoundingBox.width;
+            heatMapWidth= this.calculateHeatMapWidth();
 
-        this.updateXScale(data, heatMapWidth);
+        this.transition(this.heatMap)
+            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (this.svgH - heatMapHeight - padding + 5) + ")");
+
+        this.updateXScaleDomain(data);
+        this.updateXScaleSize(heatMapWidth);
         this.renderXAxis(heatMapHeight);
         this.updateColorScale(fields);
 
@@ -329,9 +341,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             currentCols= this.heatMapStage
                 .selectAll("g.col")
                 .filter(inRange);
-
-        this.transition(this.heatMap)
-            .attr("transform", "translate(" + (yAxisBoundingBox.width * 1.10) + "," + (svgH - heatMapHeight - padding + 5) + ")");
 
         currentCols.each(updateRects)
             .call(this.move, this);
@@ -421,8 +430,22 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
     },
 
+    updateSvgDimensions: function(){
+        this.svgW= this.parentDiv.node().getBoundingClientRect().width;
+        this.svgH= this.parentDiv.node().getBoundingClientRect().height;
+    },
+
+    calculateHeatMapHeight: function(){
+        return this.svgH-50;
+    },
+
     updateSpan: function(data){
         this.spanInUnixTime= data.span * 1000;
+    },
+
+    calculateHeatMapWidth: function(){
+        var yAxisBoundingBox= this.heatMap.select("g.axis.y")[0][0].getBoundingClientRect();
+        return this.svgW * 0.95 - yAxisBoundingBox.width;
     },
 
     move: function(selection, self) {
@@ -450,11 +473,8 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     render: function (width, height) {
 
-        this.yScale.rangeBands([height, 0]);
-        this.xScale.range([0, width]);
-
-        this.updateBucketWidth(width);
-        this.updateBucketHeight(height);
+        this.updateYScaleSize(height);
+        this.updateXScaleSize(width);
 
         this.heatMapStage.selectAll("g.col")
             .call(this.move, this);
@@ -501,15 +521,13 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         }
     },
 
-    calculateYScale: function(domain, height){
-        return d3.scale.ordinal().domain(domain).rangeBands([height, 0]); //rangePoints for circles
+    updateYScaleDomain: function(data){
+        var yDom= this.calculateYDomain(data);
+        this.yScale.domain(yDom);
     },
 
-    updateYScale: function(data, height){
-        var yDom= this.calculateYDomain(data);
-
-        this.yScale= this.calculateYScale(yDom, height);
-
+    updateYScaleSize: function(height){
+        this.yScale.rangeBands([height, 0]); //rangePoints for circles
         this.updateBucketHeight(height);
     },
 
@@ -598,12 +616,9 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             .attr("y2", y);
     },
 
-    updateXScale: function(data, width) {
-        this.updateXDom(data);
-
+    updateXScaleSize: function(width) {
         this.updateBucketWidth(width);
-
-        this.xScale= this.calculateXScale(this.xDom, width);
+        this.xScale.range([0, width]);
     },
 
     renderXAxis: function(height){
@@ -628,7 +643,7 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         this.xDom[0]= this.addTime(this.xDom[0], time);
     },
 
-    updateXDom: function(data){
+    updateXScaleDomain: function(data){
         var newXDom= d3.extent(data, this.getTime);
 
         newXDom[1]= this.addTime(newXDom[1], this.spanInUnixTime); //Changes time axis to deal with time spans not time points.
@@ -647,17 +662,15 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
                 this.shiftXDomain(time);
             }
         }
-    },
 
-    calculateXScale: function(domain, width) {
-        return d3.time.scale().domain(domain).range([0, width]);
+        this.xScale.domain(this.xDom);
     },
 
     updateColorScale: function(data) {
         var colorDom= [d3.min(data.values(), function (d) { return d.min; }) + this.colorOffset,
             d3.max(data.values(), function (d){ return d.max; }) + this.colorOffset];
 
-        this.colorScale= this.colorScale.domain(colorDom).range(this.colorRange);
+        this.colorScale.domain(colorDom).range(this.colorRange);
     },
 
     updateThresholdLines : function(){
