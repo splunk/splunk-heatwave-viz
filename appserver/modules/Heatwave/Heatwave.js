@@ -23,8 +23,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
 
     initialize: function($super, container) {
         $super(container);
-        console.log("INITIALIZE IS RUN");
-
         this.parentDiv = d3.select(container).select("div");
         this.svg= d3.select(container).select("svg");
         this.heatMap= this.svg.append("g")
@@ -134,8 +132,6 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
     },
 
     getModifiedContext: function() {
-        console.log("getModifiedContext");
-
         if(this.getClicked()){
             var context = this.getContext(),
                 search = context.get("search"),
@@ -186,14 +182,12 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
         if (this.searchQueryIsProper()){
             var limit = this.verifySearchLimit(context,search);
             if (limit > this.rowLimit){
-                console.log("Limit is currently: "+limit);
-                console.log("Limit can only take values less than "+this.rowLimit);
+                var err = "Limit is currently: "+limit+". "+"Limit can only take values less than "+this.rowLimit;
                 search.job.cancel();
-                console.log("The job is canceled.");
+                alert(err);
             }
         }else{
             search.job.cancel();
-            console.log("The job is canceled.");
         }
 
         if (context.get("search").job.isDone()) {
@@ -217,11 +211,11 @@ Splunk.Module.Heatwave = $.klass(Splunk.Module.DispatchingModule, {
             subSearch = search.toString().substr(search.toString().lastIndexOf('|'));
 
         if (subSearch.indexOf("timechart") === -1){
-            console.log("The search query does not end with a timechart command.");
+            alert("The search query does not end with a timechart command.");
             return false;
         }
         if (subSearch.indexOf("timechart") !== -1 && subSearch.indexOf("by") === -1){
-            console.log("The timechart command is missing a 'by' clause.");
+            alert("The timechart command is missing a 'by' clause.");
             return false;
         }
         return true;
